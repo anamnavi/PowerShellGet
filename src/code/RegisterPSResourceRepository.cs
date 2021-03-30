@@ -78,7 +78,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         public SwitchParameter PSGallery { get; set; }
 
         /// <summary>
-        /// Specifies a hashtable of repositories and is used to register multiple repositories at once.
+        /// Specifies an array of hashtables of repositories and is used to register multiple repositories at once.
         /// </summary>
         [Parameter(Mandatory = true, ParameterSetName = "RepositoriesParameterSet", ValueFromPipeline = true)]
         [ValidateNotNullOrEmpty]
@@ -115,7 +115,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         public PSCredential ProxyCredential { get; set; }
 
         /// <summary>
-        /// When specified, displays the succcessfully registered repository and its information
+        /// When specified, displays the succcessfully registered repository and its information.
         /// </summary>
         [Parameter]
         public SwitchParameter PassThru { get; set; }

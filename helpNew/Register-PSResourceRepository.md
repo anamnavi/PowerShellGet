@@ -8,7 +8,7 @@ schema: 2.0.0
 # Register-PSResourceRepository
 
 ## SYNOPSIS
-{{ Fill in the Synopsis }}
+The Register-PSResourceRepository cmdlet replaces the Register-PSRepository from V2. It registers a repository for PowerShell modules. The repository is registered to the current user's scope and does not have a system-wide scope.
 
 ## SYNTAX
 
@@ -30,21 +30,50 @@ Register-PSResourceRepository -Repositories <Hashtable[]> [-PassThru] [-WhatIf] 
 ```
 
 ## DESCRIPTION
-{{ Fill in the Description }}
+The Register-PSResourceRepository cmdlet replaces the Register-PSRepository from V2. It registers a repository for PowerShell modules. The repository is registered to the current user's scope and does not have a system-wide scope.
 
 ## EXAMPLES
-
+These examples assume that the repository we attempt to reigster are not already registered for the current user.
 ### Example 1
 ```
-PS C:\> {{ Add example code here }}
+PS C:\> Register-PSResourceRepository -Name "PoshTestGallery" -URL "https://www.powershellgallery.com/api/v2"
+PS C:\> Get-PSResourceRepository -Name "PoshTestGallery"
+        Name             Url                                          Trusted   Priority
+        ----             ---                                          -------   --------
+        PoshTestGallery  https://www.poshtestgallery.com/api/v2         False         50
 ```
 
-{{ Add example description here }}
+This example registers the repository with the 'Name' of "PoshtTestGallery" along with the associated 'URL' value for it.
+
+### Example 2
+```
+PS C:\> Register-PSResourceRepository -PSGallery
+PS C:\> Get-PSResourceRepository -Name "PSGallery"
+        Name             Url                                          Trusted   Priority
+        ----             ---                                          -------   --------
+        PSGallery        https://www.powershellgallery.com/api/v2       False         50
+```
+
+This example registers the "PSGallery" repository, with the 'PSGallery' parameter. Unlike the previous example, we cannot use the 'Name' or 'URL' parameters to register the "PSGallery" repository as it is considered Powershell's default repository store and has its own value for URL.
+
+### Example 3
+```
+PS C:\> $arrayOfHashtables = @{Name = "psgettestlocal"; URL = "c:/code/testdir"},@{PSGallery = $True}
+PS C:\> Register-PSResourceRepository -Repositories $arrayOfHashtables
+PS C:\> Get-PSResourceRepository
+        Name             Url                                          Trusted   Priority
+        ----             ---                                          -------   --------
+        PSGallery        https://www.powershellgallery.com/api/v2       False         50
+        psgettestlocal   file:///c:/code/testdir                        False         50
+
+```
+
+This example registers multiple repositories at once. To do so, we use the 'Repositories' parameter and provide an array of hashtables. Each hashtable can only have keys associated with parameters for the NameParameterSet or the PSGalleryParameterSet. Upon running the command we can see that the "psgettestlocal" and "PSGallery" repositories have been succesfully registered.
 
 ## PARAMETERS
 
 ### -Name
-{{ Fill Name Description }}
+Name of the repository to be registered.
 
 ```yaml
 Type: String
@@ -59,7 +88,8 @@ Accept wildcard characters: False
 ```
 
 ### -Priority
-{{ Fill Priority Description }}
+Specifies the priority ranking of the repository.
+Repositories with higher ranking priority are searched before a lower ranking priority one, when searching for a repository item across multiple registered repositories. Valid priority values range from 0 to 50, such that a lower numeric value (i.e 10) corresponds to a higher priority ranking than a higher numeric value (i.e 40). Has default value of 50.
 
 ```yaml
 Type: Int32
@@ -68,13 +98,13 @@ Aliases:
 
 Required: False
 Position: Named
-Default value: None
+Default value: 50
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
 ### -PSGallery
-{{ Fill PSGallery Description }}
+When specified, registers PSGallery repository.
 
 ```yaml
 Type: SwitchParameter
@@ -89,7 +119,7 @@ Accept wildcard characters: False
 ```
 
 ### -Repositories
-{{ Fill Repositories Description }}
+Specifies an array of hashtables of repositories and is used to register multiple repositories at once.
 
 ```yaml
 Type: Hashtable[]
@@ -104,7 +134,7 @@ Accept wildcard characters: False
 ```
 
 ### -Trusted
-{{ Fill Trusted Description }}
+Specifies whether the repository should be trusted.
 
 ```yaml
 Type: SwitchParameter
@@ -119,7 +149,8 @@ Accept wildcard characters: False
 ```
 
 ### -URL
-{{ Fill URL Description }}
+Specifies the location of the repository to be registered.
+URL can be of the following Uri schemas: HTTPS, HTTP, FTP, file share based.
 
 ```yaml
 Type: Uri
@@ -165,7 +196,7 @@ Accept wildcard characters: False
 ```
 
 ### -PassThru
-{{ Fill PassThru Description }}
+When specified, displays the succcessfully registered repository and its information.
 
 ```yaml
 Type: SwitchParameter
@@ -184,14 +215,13 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ## INPUTS
 
-### System.Management.Automation.PSCredential
+### System.String
 ### System.Uri
 ## OUTPUTS
 
-### System.Object
+### Microsoft.PowerShell.PowerShellGet.UtilClasses.PSRepositoryInfo (if 'PassThru' parameter used)
 ## NOTES
+Repositories are unique by 'Name'. Attempting to register a repository with same 'Name' as an already registered repository will not successfully register.
+Registering the PSGallery repository must be done via the PSGalleryParameterSet (i.e by using the 'PSGallery' parameter instead of 'Name' and 'URL' parameters).
 
 ## RELATED LINKS
-
-[<add>]()
-
