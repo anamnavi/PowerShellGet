@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Threading;
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
@@ -26,6 +28,8 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
 
         private const string NameParameterSet = "NameParameterSet";
         private const string InputObjectParameterSet = "InputObjectParameterSet";
+        private CancellationTokenSource _source;
+        private CancellationToken _cancellationToken;
 
         #endregion
 
@@ -110,28 +114,69 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         #endregion
 
         #region Methods
+
+        protected override void BeginProcessing()
+        {
+            _source = new CancellationTokenSource();
+            _cancellationToken = _source.Token;
+        }
+
+        protected override void StopProcessing()
+        {
+            _source.Cancel();
+        }
+
         protected override void ProcessRecord()
         {
-            // TODO: remove all wildcards?
-            // Name = Utils.FilterOutWildcardNames(Name, out string[] errorMsgs);
+            // wildcard is supported for Update, but only *, other wildcards should be stripped
+            Name = Utils.FilterOutWildcardNames(Name, out string[] errorMsgs);
 
-            // foreach (string error in errorMsgs)
-            // {
-            //     WriteError(new ErrorRecord(
-            //         new PSInvalidOperationException(error),
-            //         "ErrorFilteringNamesForUnsupportedWildcards",
-            //         ErrorCategory.InvalidArgument,
-            //         this));
-            // }
+            foreach (string error in errorMsgs)
+            {
+                WriteError(new ErrorRecord(
+                    new PSInvalidOperationException(error),
+                    "ErrorFilteringNamesForUnsupportedWildcards",
+                    ErrorCategory.InvalidArgument,
+                    this));
+            }
 
             if (Name.Length == 0)
             {
                  return;
             }
 
+            InstallHelper installHelper = new InstallHelper(
+                update: true,
+                save: false,
+                cancellationToken: _cancellationToken,
+                cmdletPassedIn: this);
+
             switch (ParameterSetName)
             {
                 case NameParameterSet:
+                    installHelper.ProcessInstallParams(
+                        names: Name,
+                        versionRange: ,
+                        prerelease: Prerelease,
+                        repository: Repository,
+                        scope: Scope,
+                        acceptLicense: AcceptLicense,
+                        quiet: Quiet,
+                        reinstall: false,
+                        force: false, // todo: confirm!
+                        trustRepository: TrustRepository,
+                        noClobber: NoClobber,
+                        credential: Credential,
+                        requiredResourceFile: null, // todo: confirm!
+                        requiredResourceJson: null, // todo confirm!
+                        requiredResourceHash: null, // todo: confirm!
+                        specifiedPath: null, // todo: confirm
+                        asNupkg: false, // todo: confirm
+                        includeXML: false, // todo confirm!
+                        pathsToInstallPkg: null // todo: confirm!
+
+                    );
+                    break;
                     // TODO
                     // FindHelper findHelper = new FindHelper(_cancellationToken, this);
                     // List<PSResourceInfo> foundPackages = new List<PSResourceInfo>();
