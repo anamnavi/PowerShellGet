@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Threading;
 using Dbg = System.Diagnostics.Debug;
 using System.Management.Automation;
 using Microsoft.PowerShell.PowerShellGet.UtilClasses;
+using NuGet.Versioning;
 
 namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
 {
@@ -25,6 +27,8 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         #region Members
         private const string NameParameterSet = "NameParameterSet";
         private const string InputObjectParameterSet = "InputObjectParameterSet";
+        private CancellationTokenSource _source;
+        private CancellationToken _cancellationToken;
         #endregion
 
         #region Parameters
@@ -103,6 +107,12 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
 
         #region Methods
 
+        protected override void BeginProcessing()
+        {
+            _source = new CancellationTokenSource();
+            _cancellationToken = _source.Token;
+        }
+
         protected override void ProcessRecord()
         {
             foreach (string pkgName in Name)
@@ -117,24 +127,47 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                 }
             }
 
+            VersionRange versionRange = new VersionRange();
+
+            if (Version !=null && !Utils.TryParseVersionOrVersionRange(Version, out versionRange))
+            {
+                WriteError(new ErrorRecord(
+                    new PSInvalidOperationException("Cannot parse Version parameter provided into VersionRange"),
+                    "ErrorParsingVersionParamIntoVersionRange",
+                    ErrorCategory.InvalidArgument,
+                    this));
+                versionRange = new VersionRange(); // or should I return here instead?
+            }
+
+            InstallHelper installHelper = new InstallHelper(
+                    update: false,
+                    save: true,
+                    cancellationToken: _cancellationToken,
+                    cmdletPassedIn: this);
+
             switch (ParameterSetName)
             {
                 case NameParameterSet:
-                    // TODO
-                    // FindHelper findHelper = new FindHelper(_cancellationToken, this);
-                    // List<PSResourceInfo> foundPackages = new List<PSResourceInfo>();
-
-                    // foreach (PSResourceInfo package in findHelper.FindByResourceName(Name, Type, Version, Prerelease, Tag, Repository, Credential, IncludeDependencies))
-                    // {
-                    //     foundPackages.Add(package);
-                    // }
-
-                    // foreach (var uniquePackageVersion in foundPackages.GroupBy(
-                    //     m => new {m.Name, m.Version}).Select(
-                    //         group => group.First()).ToList())
-                    // {
-                    //     WriteObject(uniquePackageVersion);
-                    // }
+                    installHelper.ProcessInstallParams(
+                        names: Name,
+                        versionRange: versionRange,
+                        prerelease: Prerelease,
+                        repository: Repository,
+                        scope: null,
+                        acceptLicense: false,
+                        quiet: false, // todo: do we need to add this field? think not
+                        reinstall: false,
+                        force: false, // todo: do we need to add this value?
+                        trustRepository: TrustRepository,
+                        noClobber: false, // todo: do we need to add this property?
+                        credential: Credential,
+                        requiredResourceFile: null,
+                        requiredResourceJson: null,
+                        requiredResourceHash: null,
+                        specifiedPath: null, // TODO: do we need to add? Think so!
+                        asNupkg: false, // TODO: do we need to add? Think so!
+                        includeXML: false, // do we need to add? Think so
+                        pathsToInstallPkg: null); // do we need to add? think not
 
                     break;
 
