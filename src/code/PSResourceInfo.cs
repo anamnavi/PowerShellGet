@@ -416,7 +416,8 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
                     IconUri = ParseMetadataIconUri(metadataToParse),
                     LicenseUri = ParseMetadataLicenseUri(metadataToParse),
                     Name = ParseMetadataName(metadataToParse),
-                    PrereleaseLabel = ParsePrerelease(metadataToParse),
+                    PrereleaseLabel = ParsePrerelease(metadataToParse, out bool isPrerelease),
+                    IsPrerelease = isPrerelease,
                     ProjectUri = ParseMetadataProjectUri(metadataToParse),
                     PublishedDate = ParseMetadataPublishedDate(metadataToParse),
                     Repository = repositoryName,
@@ -681,11 +682,13 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
             return pkg.Identity?.Id ?? string.Empty;
         }
 
-        private static string ParsePrerelease(IPackageSearchMetadata pkg)
+        private static string ParsePrerelease(IPackageSearchMetadata pkg, out bool isPrerelease)
         {
-            return pkg.Identity.Version.ReleaseLabels.Count() == 0 ?
-                String.Empty :
-                pkg.Identity.Version.ReleaseLabels.FirstOrDefault();
+            isPrerelease = pkg.Identity.Version.ReleaseLabels.Count() > 0;
+
+            return isPrerelease ?
+                pkg.Identity.Version.ReleaseLabels.FirstOrDefault() :
+                String.Empty;
         }
 
         private static Uri ParseMetadataProjectUri(IPackageSearchMetadata pkg)
@@ -773,6 +776,11 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
 
         private PSObject ConvertToCustomObject()
         {
+            // The IsPrerelease property determines whether this package is prerelease or not, and should be included in the metadata
+            // For V2 IsPrerelease information is always stored in the AdditionalMetadata object and for V3 we continue to do that to be compatible
+            // TODO: For V3, should we write this IsPrerelease property as an object to the XML file? and then read it from the xml object or from additional
+            // metadata conditionally? Do we even need the ADditionalMetadata from IPacakgeSourceMetadata (in TryConvert)?
+            AdditionalMetadata.Add(nameof(IsPrerelease), IsPrerelease.ToString());
             var additionalMetadata = new PSObject();
             foreach (var item in AdditionalMetadata)
             {
