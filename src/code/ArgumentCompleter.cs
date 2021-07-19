@@ -48,12 +48,10 @@ internal class InstalledPackagesNameCompleter : IArgumentCompleter
         {
             wordToComplete = Utils.TrimQuotes(wordToComplete);
             wordToComplete = String.IsNullOrWhiteSpace(wordToComplete) ? "*" : wordToComplete + "*";
-            // var wordToCompletePattern = WildcardPattern.Get(
-            //     pattern: String.IsNullOrWhiteSpace(wordToComplete) ? "*" : wordToComplete + "*",
-            //     options: WildcardOptions.IgnoreCase);
-
 
             GetHelper getHelper = new GetHelper(null); // null won't work for Verbose/DEbug/errors I think...
+
+            // getHelper handles wildcards
             foreach (PSResourceInfo pkg in getHelper.FilterPkgPaths(
                 name: new string[] {wordToComplete},
                 versionRange: VersionRange.All, 
