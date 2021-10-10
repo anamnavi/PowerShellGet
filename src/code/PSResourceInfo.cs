@@ -246,7 +246,7 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
         public ResourceIncludes Includes { get; }
         public DateTime? InstalledDate { get; internal set; }
         public string InstalledLocation { get; internal set; }
-        public bool IsPrerelease { get; }
+        public bool Prerelease { get; }
         public Uri LicenseUri { get; }
         public string Name { get; }
         public string PackageManagementProvider { get; }
@@ -279,7 +279,7 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
             ResourceIncludes includes,
             DateTime? installedDate,
             string installedLocation,
-            bool isPrelease,
+            bool prerelease,
             Uri licenseUri,
             string name,
             string packageManagementProvider,
@@ -305,7 +305,7 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
             Includes = includes ?? new ResourceIncludes();
             InstalledDate = installedDate;
             InstalledLocation = installedLocation ?? string.Empty;
-            IsPrerelease = isPrelease;
+            Prerelease = prerelease;
             LicenseUri = licenseUri;
             Name = name ?? string.Empty;
             PackageManagementProvider = packageManagementProvider ?? string.Empty;
@@ -410,7 +410,7 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
                     includes: new ResourceIncludes(GetProperty<Hashtable>(nameof(PSResourceInfo.Includes), psObjectInfo)),
                     installedDate: GetProperty<DateTime>(nameof(PSResourceInfo.InstalledDate), psObjectInfo),
                     installedLocation: GetStringProperty(nameof(PSResourceInfo.InstalledLocation), psObjectInfo),
-                    isPrelease: GetProperty<bool>(nameof(PSResourceInfo.IsPrerelease), psObjectInfo),
+                    prerelease: GetProperty<bool>(nameof(PSResourceInfo.Prerelease), psObjectInfo),
                     licenseUri: GetProperty<Uri>(nameof(PSResourceInfo.LicenseUri), psObjectInfo),
                     name: GetStringProperty(nameof(PSResourceInfo.Name), psObjectInfo),
                     packageManagementProvider: GetStringProperty(nameof(PSResourceInfo.PackageManagementProvider), psObjectInfo),
@@ -535,7 +535,7 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
                     includes: includes,
                     installedDate: null,
                     installedLocation: null,
-                    isPrelease: ParseMetadataIsPrerelease(metadataToParse),
+                    prerelease: ParseMetadataIsPrerelease(metadataToParse),
                     licenseUri: ParseMetadataLicenseUri(metadataToParse),
                     name: ParseMetadataName(metadataToParse),
                     packageManagementProvider: null,
@@ -917,17 +917,17 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
         {
             // 1.0.0-alpha1
             // 1.0.0.0
-            string NormalizedVersion = IsPrerelease ? ConcatenateVersionWithPrerelease(Version.ToString(), PrereleaseLabel) : Version.ToString();
+            string NormalizedVersion = Prerelease ? ConcatenateVersionWithPrerelease(Version.ToString(), PrereleaseLabel) : Version.ToString();
 
             var additionalMetadata = new PSObject();
 
-            if (!AdditionalMetadata.ContainsKey(nameof(IsPrerelease)))
+            if (!AdditionalMetadata.ContainsKey(nameof(Prerelease)))
             {
-                AdditionalMetadata.Add(nameof(IsPrerelease), IsPrerelease.ToString());
+                AdditionalMetadata.Add(nameof(Prerelease), Prerelease.ToString());
             }
             else
             {
-                AdditionalMetadata[nameof(IsPrerelease)] = IsPrerelease.ToString();
+                AdditionalMetadata[nameof(Prerelease)] = Prerelease.ToString();
             }
 
             // This is added for V2, V3 does not need it.
@@ -955,7 +955,7 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
             psObject.Properties.Add(new PSNoteProperty(nameof(Copyright), Copyright));
             psObject.Properties.Add(new PSNoteProperty(nameof(PublishedDate), PublishedDate));
             psObject.Properties.Add(new PSNoteProperty(nameof(InstalledDate), InstalledDate));
-            psObject.Properties.Add(new PSNoteProperty(nameof(IsPrerelease), IsPrerelease));
+            psObject.Properties.Add(new PSNoteProperty(nameof(Prerelease), Prerelease));
             psObject.Properties.Add(new PSNoteProperty(nameof(UpdatedDate), UpdatedDate));
             psObject.Properties.Add(new PSNoteProperty(nameof(LicenseUri), LicenseUri));
             psObject.Properties.Add(new PSNoteProperty(nameof(ProjectUri), ProjectUri));

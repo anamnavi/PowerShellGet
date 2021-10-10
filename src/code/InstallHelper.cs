@@ -272,7 +272,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         
                     // Create PackageIdentity in order to download
                     string createFullVersion = p.Version.ToString();
-                    if (p.IsPrerelease)
+                    if (p.Prerelease)
                     {
                         createFullVersion = p.Version.ToString() + "-" + p.PrereleaseLabel;
                     }
