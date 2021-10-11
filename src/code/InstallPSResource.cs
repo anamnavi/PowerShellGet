@@ -40,7 +40,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         /// <summary>
         /// Specifies to allow installation of prerelease versions
         /// </summary>
-        [Parameter(ParameterSetName = NameParameterSet)]
+        [Parameter(ParameterSetName = NameParameterSet, ValueFromPipelineByPropertyName = true)]
         public SwitchParameter Prerelease { get; set; }
 
         /// <summary>
