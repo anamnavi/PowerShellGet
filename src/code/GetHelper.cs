@@ -112,16 +112,33 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     foreach (string versionPath in versionsDirs)
                     {
                         _cmdletPassedIn.WriteVerbose(string.Format("Searching through package version path: '{0}'", versionPath));
-                        DirectoryInfo dirInfo = new DirectoryInfo(versionPath);
-
-                        // if the version is not valid, we'll just skip it and output a debug message
-                        if (!NuGetVersion.TryParse(dirInfo.Name, out NuGetVersion dirAsNugetVersion))
+                        if(!Utils.GetVersionFromPSGetModuleInfoFile(installedVersionPath: versionPath, isModule: true, cmdletPassedIn: _cmdletPassedIn, out NuGetVersion dirAsNugetVersion))
                         {
-                            _cmdletPassedIn.WriteVerbose(string.Format("Leaf directory in path '{0}' cannot be parsed into a version.", versionPath));
-
-                            // skip to next iteration of the loop
-                            continue;
+                            continue; // TODO: skip to next iteration of loop?
                         }
+                        // DirectoryInfo dirInfo = new DirectoryInfo(versionPath);
+                        // string currentVersion = dirInfo.Name;
+
+                        // // string PSGetModuleInfoFilePath = isModule ? Path.Combine(pkgPath, "PSGetModuleInfo.xml") : Path.Combine(Path.GetDirectoryName(pkgPath), "InstalledScriptInfos", pkgName + "_InstalledScriptInfo.xml");
+                        // string PSGetModuleInfoFilePath = Path.Combine(versionPath, "PSGetModuleInfo.xml");
+                        // if (!PSResourceInfo.TryRead(PSGetModuleInfoFilePath, out PSResourceInfo psGetInfo, out string errorMsg))
+                        // {
+                        //     continue; // TODO: is this accurate?
+                        // }
+
+                        // if (!String.IsNullOrEmpty(psGetInfo.PrereleaseLabel))
+                        // {
+                        //     currentVersion = currentVersion + "-" + psGetInfo.PrereleaseLabel;
+                        // }
+
+                        // // if the version is not valid, we'll just skip it and output a debug message
+                        // if (!NuGetVersion.TryParse(currentVersion, out NuGetVersion dirAsNugetVersion))
+                        // {
+                        //     _cmdletPassedIn.WriteVerbose(string.Format("Leaf directory in path '{0}' cannot be parsed into a version.", versionPath));
+
+                        //     // skip to next iteration of the loop
+                        //     continue;
+                        // }
                         _cmdletPassedIn.WriteVerbose(string.Format("Directory parsed as NuGet version: '{0}'", dirAsNugetVersion));
 
                         if (versionRange.Satisfies(dirAsNugetVersion))

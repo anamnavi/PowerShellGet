@@ -180,6 +180,37 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
             return VersionRange.TryParse(version, out versionRange);
         }
 
+        public static bool GetVersionFromPSGetModuleInfoFile(
+            string installedVersionPath,
+            bool isModule,
+            PSCmdlet cmdletPassedIn,
+            out NuGetVersion pkgNuGetVersion)
+        {
+            DirectoryInfo dirInfo = new DirectoryInfo(installedVersionPath);
+            string version = dirInfo.Name;
+            string PSGetModuleInfoFilePath = isModule ? Path.Combine(installedVersionPath, "PSGetModuleInfo.xml") : Path.Combine(Path.GetDirectoryName(installedVersionPath), "InstalledScriptInfos", dirInfo.Parent.Name + "_InstalledScriptInfo.xml");
+            if (!PSResourceInfo.TryRead(PSGetModuleInfoFilePath, out PSResourceInfo psGetInfo, out string errorMsg))
+            {
+                cmdletPassedIn.WriteVerbose(String.Format("The PSGetModuleInfo.xml file found at location: {0} cannot be parsed due to {1}", PSGetModuleInfoFilePath, errorMsg));
+                NuGetVersion.TryParse(installedVersionPath, out pkgNuGetVersion);
+                return false; // TODO: is this accurate?
+            }
+
+            string prereleaseLabel = psGetInfo.PrereleaseLabel;
+            if (!String.IsNullOrEmpty(prereleaseLabel))
+            {
+                version = version + "-" + psGetInfo.PrereleaseLabel;
+            }
+
+            if (!NuGetVersion.TryParse(version, out pkgNuGetVersion))
+            {
+                cmdletPassedIn.WriteVerbose(String.Format("Leaf directory in path '{0}' cannot be parsed into a version.", installedVersionPath));
+                return false;
+            }
+
+            return true;
+        }
+
         #endregion
 
         #region Url methods
