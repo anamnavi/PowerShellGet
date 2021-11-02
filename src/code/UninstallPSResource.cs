@@ -1,4 +1,3 @@
-using System.Text;
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 using System;
@@ -110,7 +109,8 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     break;
 
                 case InputObjectParameterSet:
-                    if (!Utils.TryParseVersionOrVersionRange(InputObject.Version.ToString(), out _versionRange))
+                    
+                    if (!Utils.TryParseVersionOrVersionRange(version: String.IsNullOrEmpty(InputObject.PrereleaseLabel) ? InputObject.Version.ToString() : Utils.GetNormalizedVersionString(versionString: InputObject.Version.ToString(), prerelease: InputObject.PrereleaseLabel), out _versionRange))
                     {
                         var exMessage = String.Format("Version '{0}' for resource '{1}' cannot be parsed.", InputObject.Version.ToString(), InputObject.Name);
                         var ex = new ArgumentException(exMessage);
