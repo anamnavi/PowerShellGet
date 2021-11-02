@@ -181,30 +181,38 @@ namespace Microsoft.PowerShell.PowerShellGet.UtilClasses
         }
 
         public static bool GetVersionFromPSGetModuleInfoFile(
-            string installedVersionPath,
+            string installedPkgPath,
             bool isModule,
             PSCmdlet cmdletPassedIn,
             out NuGetVersion pkgNuGetVersion)
         {
-            DirectoryInfo dirInfo = new DirectoryInfo(installedVersionPath);
-            string version = dirInfo.Name;
-            string PSGetModuleInfoFilePath = isModule ? Path.Combine(installedVersionPath, "PSGetModuleInfo.xml") : Path.Combine(Path.GetDirectoryName(installedVersionPath), "InstalledScriptInfos", dirInfo.Parent.Name + "_InstalledScriptInfo.xml");
+            // for Modules, installedPkgPath will look like this:
+            // ./PowerShell/Modules/test_module/3.0.0
+            // for Scripts, installedPkgPath will look like this:
+            // ./PowerShell/Scripts/test_script.ps1
+
+            string pkgName = String.Empty;
+            if (!isModule)
+            {
+                pkgName = Utils.GetInstalledPackageName(installedPkgPath);
+            }
+
+            string PSGetModuleInfoFilePath = isModule ? Path.Combine(installedPkgPath, "PSGetModuleInfo.xml") : Path.Combine((new DirectoryInfo(installedPkgPath).Parent).FullName, "InstalledScriptInfos", $"{pkgName}_InstalledScriptInfo.xml");
             if (!PSResourceInfo.TryRead(PSGetModuleInfoFilePath, out PSResourceInfo psGetInfo, out string errorMsg))
             {
                 cmdletPassedIn.WriteVerbose(String.Format("The PSGetModuleInfo.xml file found at location: {0} cannot be parsed due to {1}", PSGetModuleInfoFilePath, errorMsg));
-                NuGetVersion.TryParse(installedVersionPath, out pkgNuGetVersion);
-                return false; // TODO: is this accurate?
+                NuGetVersion.TryParse(installedPkgPath, out pkgNuGetVersion);
+                return false;
             }
 
+            string version = psGetInfo.Version.ToString();
             string prereleaseLabel = psGetInfo.PrereleaseLabel;
-            if (!String.IsNullOrEmpty(prereleaseLabel))
-            {
-                version = version + "-" + psGetInfo.PrereleaseLabel;
-            }
 
-            if (!NuGetVersion.TryParse(version, out pkgNuGetVersion))
+            if (!NuGetVersion.TryParse(
+                    value: String.IsNullOrEmpty(prereleaseLabel) ? version : GetNormalizedVersionString(version, prereleaseLabel),
+                    version: out pkgNuGetVersion))
             {
-                cmdletPassedIn.WriteVerbose(String.Format("Leaf directory in path '{0}' cannot be parsed into a version.", installedVersionPath));
+                cmdletPassedIn.WriteVerbose(String.Format("Leaf directory in path '{0}' cannot be parsed into a version.", installedPkgPath));
                 return false;
             }
 

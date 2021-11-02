@@ -112,33 +112,15 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     foreach (string versionPath in versionsDirs)
                     {
                         _cmdletPassedIn.WriteVerbose(string.Format("Searching through package version path: '{0}'", versionPath));
-                        if(!Utils.GetVersionFromPSGetModuleInfoFile(installedVersionPath: versionPath, isModule: true, cmdletPassedIn: _cmdletPassedIn, out NuGetVersion dirAsNugetVersion))
+                        if(!Utils.GetVersionFromPSGetModuleInfoFile(installedVersionPath: versionPath,
+                            isModule: true,
+                            cmdletPassedIn: _cmdletPassedIn,
+                            out NuGetVersion dirAsNugetVersion))
                         {
-                            continue; // TODO: skip to next iteration of loop?
+                            // skip to next iteration of the loop
+                            continue;
                         }
-                        // DirectoryInfo dirInfo = new DirectoryInfo(versionPath);
-                        // string currentVersion = dirInfo.Name;
 
-                        // // string PSGetModuleInfoFilePath = isModule ? Path.Combine(pkgPath, "PSGetModuleInfo.xml") : Path.Combine(Path.GetDirectoryName(pkgPath), "InstalledScriptInfos", pkgName + "_InstalledScriptInfo.xml");
-                        // string PSGetModuleInfoFilePath = Path.Combine(versionPath, "PSGetModuleInfo.xml");
-                        // if (!PSResourceInfo.TryRead(PSGetModuleInfoFilePath, out PSResourceInfo psGetInfo, out string errorMsg))
-                        // {
-                        //     continue; // TODO: is this accurate?
-                        // }
-
-                        // if (!String.IsNullOrEmpty(psGetInfo.PrereleaseLabel))
-                        // {
-                        //     currentVersion = currentVersion + "-" + psGetInfo.PrereleaseLabel;
-                        // }
-
-                        // // if the version is not valid, we'll just skip it and output a debug message
-                        // if (!NuGetVersion.TryParse(currentVersion, out NuGetVersion dirAsNugetVersion))
-                        // {
-                        //     _cmdletPassedIn.WriteVerbose(string.Format("Leaf directory in path '{0}' cannot be parsed into a version.", versionPath));
-
-                        //     // skip to next iteration of the loop
-                        //     continue;
-                        // }
                         _cmdletPassedIn.WriteVerbose(string.Format("Directory parsed as NuGet version: '{0}'", dirAsNugetVersion));
 
                         if (versionRange.Satisfies(dirAsNugetVersion))
@@ -164,20 +146,20 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     }
                     else
                     {
-                        // check to make sure it's within the version range.
-                        // script versions will be parsed from the script xml file
+                        // // check to make sure it's within the version range.
+                        // // script versions will be parsed from the script xml file
                         PSResourceInfo scriptInfo = OutputPackageObject(pkgPath, _scriptDictionary);
-                        if (scriptInfo == null)
+                        if(!Utils.GetVersionFromPSGetModuleInfoFile(installedVersionPath: pkgPath,
+                            isModule: false,
+                            cmdletPassedIn: _cmdletPassedIn,
+                            out NuGetVersion dirAsNugetVersion))
                         {
-                            // if script was not found skip to the next iteration of the loop
-                            continue;
+                            // skip to next iteration of the loop
+                            yield return pkgPath;
                         }
 
-                        if (!NuGetVersion.TryParse(scriptInfo.Version.ToString(), out NuGetVersion scriptVersion))
-                        {
-                            _cmdletPassedIn.WriteVerbose(string.Format("Version '{0}' could not be properly parsed from the script metadata file from the script installed at '{1}'", scriptInfo.Version.ToString(), scriptInfo.InstalledLocation));
-                        }
-                        else if (versionRange.Satisfies(scriptVersion))
+                        _cmdletPassedIn.WriteVerbose(string.Format("Directory parsed as NuGet version: '{0}'", dirAsNugetVersion));
+                        if (versionRange.Satisfies(dirAsNugetVersion))
                         {
                             _scriptDictionary.Add(pkgPath, scriptInfo);
                             yield return pkgPath;
