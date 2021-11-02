@@ -109,8 +109,9 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     break;
 
                 case InputObjectParameterSet:
-                    
-                    if (!Utils.TryParseVersionOrVersionRange(version: String.IsNullOrEmpty(InputObject.PrereleaseLabel) ? InputObject.Version.ToString() : Utils.GetNormalizedVersionString(versionString: InputObject.Version.ToString(), prerelease: InputObject.PrereleaseLabel), out _versionRange))
+                    string inputObjectPrereleaseLabel = InputObject.PrereleaseLabel;
+                    string inputObjectVersion = String.IsNullOrEmpty(inputObjectPrereleaseLabel) ? InputObject.Version.ToString() : Utils.GetNormalizedVersionString(versionString: InputObject.Version.ToString(), prerelease: inputObjectPrereleaseLabel);
+                    if (!Utils.TryParseVersionOrVersionRange(version: inputObjectVersion, versionRange: out _versionRange))
                     {
                         var exMessage = String.Format("Version '{0}' for resource '{1}' cannot be parsed.", InputObject.Version.ToString(), InputObject.Name);
                         var ex = new ArgumentException(exMessage);
