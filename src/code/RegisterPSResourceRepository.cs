@@ -32,7 +32,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         private const bool defaultTrusted = false;
         private const string NameParameterSet = "NameParameterSet";
         private const string PSGalleryParameterSet = "PSGalleryParameterSet";
-        private const string RepositoriesParameterSet = "RepositoriesParameterSet";
+        private const string RepositoryParameterSet = "RepositoryParameterSet";
         private Uri _url;
 
         #endregion
@@ -62,9 +62,9 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         /// <summary>
         /// Specifies a hashtable of repositories and is used to register multiple repositories at once.
         /// </summary>
-        [Parameter(Mandatory = true, ParameterSetName = RepositoriesParameterSet)]
+        [Parameter(Mandatory = true, ParameterSetName = RepositoryParameterSet)]
         [ValidateNotNullOrEmpty]
-        public Hashtable[] Repositories {get; set;}
+        public Hashtable[] Repository {get; set;}
 
         /// <summary>
         /// Specifies whether the repository should be trusted.
@@ -170,16 +170,16 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     }
                     break;
 
-                case RepositoriesParameterSet:
+                case RepositoryParameterSet:
                     try
                     {
-                        items = RepositoriesParameterSetHelper();
+                        items = RepositoryParameterSetHelper();
                     }
                     catch (Exception e)
                     {
                         ThrowTerminatingError(new ErrorRecord(
                             new PSInvalidOperationException(e.Message),
-                            "ErrorInRepositoriesParameterSet",
+                            "ErrorInRepositoryParameterSet",
                             ErrorCategory.InvalidArgument,
                             this));
                     }
@@ -267,10 +267,10 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             return AddToRepositoryStoreHelper(PSGalleryRepoName, psGalleryUri, repoPriority, repoTrusted, repoCredentialInfo: null);
         }
 
-        private List<PSRepositoryInfo> RepositoriesParameterSetHelper()
+        private List<PSRepositoryInfo> RepositoryParameterSetHelper()
         {
             List<PSRepositoryInfo> reposAddedFromHashTable = new List<PSRepositoryInfo>();
-            foreach (Hashtable repo in Repositories)
+            foreach (Hashtable repo in Repository)
             {
                 if (repo.ContainsKey(PSGalleryRepoName))
                 {
@@ -278,7 +278,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     {
                         WriteError(new ErrorRecord(
                                 new PSInvalidOperationException("Repository hashtable cannot contain PSGallery key with -Name, -URL and/or -CredentialInfo key value pairs"),
-                                "NotProvideNameUrlCredentialInfoForPSGalleryRepositoriesParameterSetRegistration",
+                                "NotProvideNameUrlCredentialInfoForPSGalleryRepositoryParameterSetRegistration",
                                 ErrorCategory.InvalidArgument,
                                 this));
                         continue;
@@ -286,7 +286,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
 
                     try
                     {
-                        WriteVerbose("(RepositoriesParameterSet): on repo: PSGallery. Registers PSGallery repository");
+                        WriteVerbose("(RepositoryParameterSet): on repo: PSGallery. Registers PSGallery repository");
                         reposAddedFromHashTable.Add(PSGalleryParameterSetHelper(
                             repo.ContainsKey("Priority") ? (int)repo["Priority"] : defaultPriority,
                             repo.ContainsKey("Trusted") ? (bool)repo["Trusted"] : defaultTrusted));
@@ -319,7 +319,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             {
                 WriteError(new ErrorRecord(
                         new PSInvalidOperationException("Repository name cannot be null"),
-                        "NullNameForRepositoriesParameterSetRegistration",
+                        "NullNameForRepositoryParameterSetRegistration",
                         ErrorCategory.InvalidArgument,
                         this));
                 return null;
@@ -339,7 +339,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             {
                 WriteError(new ErrorRecord(
                         new PSInvalidOperationException("Repository url cannot be null"),
-                        "NullURLForRepositoriesParameterSetRegistration",
+                        "NullURLForRepositoryParameterSetRegistration",
                         ErrorCategory.InvalidArgument,
                         this));
                 return null;
@@ -367,7 +367,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
 
             try
             {
-                WriteVerbose(String.Format("(RepositoriesParameterSet): on repo: {0}. Registers Name based repository", repo["Name"]));
+                WriteVerbose(String.Format("(RepositoryParameterSet): on repo: {0}. Registers Name based repository", repo["Name"]));
                 return NameParameterSetHelper(repo["Name"].ToString(),
                     repoURL,
                     repo.ContainsKey("Priority") ? Convert.ToInt32(repo["Priority"].ToString()) : defaultPriority,
