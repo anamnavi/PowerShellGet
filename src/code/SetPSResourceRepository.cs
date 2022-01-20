@@ -23,7 +23,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         #region Members
 
         private const string NameParameterSet = "NameParameterSet";
-        private const string RepositoriesParameterSet = "RepositoriesParameterSet";
+        private const string RepositoryParameterSet = "RepositoryParameterSet";
         private const int DefaultPriority = -1;
         private Uri _url;
 
@@ -49,9 +49,9 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         /// <summary>
         /// Specifies a hashtable of repositories and is used to register multiple repositories at once.
         /// </summary>
-        [Parameter(Mandatory = true, ParameterSetName = RepositoriesParameterSet)]
+        [Parameter(Mandatory = true, ParameterSetName = RepositoryParameterSet)]
         [ValidateNotNullOrEmpty]
-        public Hashtable[] Repositories { get; set; }
+        public Hashtable[] Repository { get; set; }
 
         /// <summary>
         /// Specifies whether the repository should be trusted.
@@ -133,16 +133,16 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                     }
                     break;
 
-                case RepositoriesParameterSet:
+                case RepositoryParameterSet:
                     try
                     {
-                        items = RepositoriesParameterSetHelper();
+                        items = RepositoryParameterSetHelper();
                     }
                     catch (Exception e)
                     {
                         ThrowTerminatingError(new ErrorRecord(
                             new PSInvalidOperationException(e.Message),
-                            "ErrorInRepositoriesParameterSet",
+                            "ErrorInRepositoryParameterSet",
                             ErrorCategory.InvalidArgument,
                             this));
                     }
@@ -233,16 +233,16 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             return RepositorySettings.Update(repoName, repoUrl, repoPriority, _trustedNullable, repoCredentialInfo);
         }
 
-        private List<PSRepositoryInfo> RepositoriesParameterSetHelper()
+        private List<PSRepositoryInfo> RepositoryParameterSetHelper()
         {
             List<PSRepositoryInfo> reposUpdatedFromHashtable = new List<PSRepositoryInfo>();
-            foreach (Hashtable repo in Repositories)
+            foreach (Hashtable repo in Repository)
             {
                 if (!repo.ContainsKey("Name") || repo["Name"] == null || String.IsNullOrEmpty(repo["Name"].ToString()))
                 {
                     WriteError(new ErrorRecord(
                             new PSInvalidOperationException("Repository hashtable must contain Name key value pair"),
-                            "NullNameForRepositoriesParameterSetRepo",
+                            "NullNameForRepositoryParameterSetRepo",
                             ErrorCategory.InvalidArgument,
                             this));
                     continue;
@@ -268,7 +268,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                 {
                     WriteError(new ErrorRecord(
                             new PSInvalidOperationException("Repository url cannot be null if provided"),
-                            "NullURLForRepositoriesParameterSetUpdate",
+                            "NullURLForRepositoryParameterSetUpdate",
                             ErrorCategory.InvalidArgument,
                             this));
                     return null;
@@ -315,7 +315,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             {
                 WriteError(new ErrorRecord(
                         new PSInvalidOperationException(e.Message),
-                        "ErrorSettingIndividualRepoFromRepositories",
+                        "ErrorSettingIndividualRepoFromRepository",
                         ErrorCategory.InvalidArgument,
                         this));
                 return null;
