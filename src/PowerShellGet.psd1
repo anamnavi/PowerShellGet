@@ -15,6 +15,7 @@
     FormatsToProcess  = 'PSGet.Format.ps1xml'
     CmdletsToExport = @(
         'Find-ACR',
+        'Find-PSACR',
         'Find-PSResource',
         'Get-PSResource',
         'Get-PSResourceRepository',
