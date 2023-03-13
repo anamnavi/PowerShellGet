@@ -49,7 +49,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         /// API call: 
         /// - Include prerelease: http://www.powershellgallery.com/api/v2/Search()?$filter=IsAbsoluteLatestVersion&searchTerm=tag:JSON&includePrerelease=true
         /// </summary>
-        public abstract string[] FindTag(string tag, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi);
+        public abstract string[] FindTag(string[] tags, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi);
 
         public abstract string[] FindCommandOrDscResource(string tag, bool includePrerelease, bool isSearchingForCommands, out ExceptionDispatchInfo edi);
 

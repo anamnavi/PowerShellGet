@@ -23,7 +23,7 @@ public interface IServerAPICalls
     /// API call: 
     /// - Include prerelease: http://www.powershellgallery.com/api/v2/Search()?$filter=IsAbsoluteLatestVersion&searchTerm='tag:JSON'&includePrerelease=true
     /// </summary>
-    string[] FindTag(string tag, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi);
+    string[] FindTag(string[] tags, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi);
   
     /// <summary>
     /// Find method which allows for searching for single name and returns latest version.

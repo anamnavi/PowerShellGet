@@ -130,7 +130,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         /// API call: 
         /// - Include prerelease: http://www.powershellgallery.com/api/v2/Search()?$filter=IsAbsoluteLatestVersion&searchTerm=tag:JSON&includePrerelease=true
         /// </summary>
-        public override string[] FindTag(string tag, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi)
+        public override string[] FindTag(string[] tags, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi)
         {
             edi = null;
             List<string> responses = new List<string>();
@@ -138,24 +138,26 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             if (_type == ResourceType.Script || _type == ResourceType.None)
             {
                 int scriptSkip = 0;
-                string initialScriptResponse = FindTagFromEndpoint(tag, repository, includePrerelease, isSearchingModule: false, scriptSkip, out edi);
+                string initialScriptResponse = FindTagsFromEndpoint(tags, repository, includePrerelease, isSearchingModule: false, scriptSkip, out edi);
                 if (edi != null)
                 {
                     return responses.ToArray();
                 }
+
                 responses.Add(initialScriptResponse);
                 int initalScriptCount = GetCountFromResponse(initialScriptResponse, out edi);
                 if (edi != null)
                 {
                     return responses.ToArray();
                 }
+
                 int count = initalScriptCount / 100;
                 // if more than 100 count, loop and add response to list
                 while (count > 0)
                 {
                     // skip 100
                     scriptSkip += 100;
-                    var tmpResponse = FindTagFromEndpoint(tag, repository, includePrerelease, isSearchingModule: false,  scriptSkip, out edi);
+                    var tmpResponse = FindTagsFromEndpoint(tags, repository, includePrerelease, isSearchingModule: false,  scriptSkip, out edi);
                     if (edi != null)
                     {
                         return responses.ToArray();
@@ -167,7 +169,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             if (_type != ResourceType.Script)
             {
                 int moduleSkip = 0;
-                string initialModuleResponse = FindTagFromEndpoint(tag, repository, includePrerelease, isSearchingModule: true, moduleSkip, out edi);
+                string initialModuleResponse = FindTagsFromEndpoint(tags, repository, includePrerelease, isSearchingModule: true, moduleSkip, out edi);
                 if (edi != null)
                 {
                     return responses.ToArray();
@@ -183,7 +185,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                 while (count > 0)
                 {
                     moduleSkip += 100;
-                    var tmpResponse = FindTagFromEndpoint(tag, repository, includePrerelease, isSearchingModule: true, moduleSkip, out edi);
+                    var tmpResponse = FindTagsFromEndpoint(tags, repository, includePrerelease, isSearchingModule: true, moduleSkip, out edi);
                     if (edi != null)
                     {
                         return responses.ToArray();
@@ -554,6 +556,29 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             var prereleaseFilter = includePrerelease ? "$filter=IsAbsoluteLatestVersion&includePrerelease=true" : "$filter=IsLatestVersion";
             
             var scriptsRequestUrlV2 = $"{repository.Uri}{typeEndpoint}/Search()?{prereleaseFilter}&searchTerm='tag:{tag}'{paginationParam}&{select}";
+
+            return HttpRequestCall(requestUrlV2: scriptsRequestUrlV2, out edi);  
+        }
+
+        private string FindTagsFromEndpoint(string[] tags, PSRepositoryInfo repository, bool includePrerelease, bool isSearchingModule, int skip, out ExceptionDispatchInfo edi)
+        {
+            // scenarios with type + tags:
+            // type: None -> search both endpoints
+            // type: M -> just search Module endpoint
+            // type: S -> just search Scripts end point
+            // type: DSCResource -> just search Modules
+            // type: Command -> just search Modules
+            string typeEndpoint = isSearchingModule ? String.Empty : "/items/psscript";
+            string paginationParam = $"&$orderby=Id desc&$inlinecount=allpages&$skip={skip}&$top=6000";
+            var prereleaseFilter = includePrerelease ? "$filter=IsAbsoluteLatestVersion&includePrerelease=true" : "$filter=IsLatestVersion";
+
+            string tagFilterPart = String.Empty;
+            foreach (string tag in tags)
+            {
+                tagFilterPart += $" and substringof('{tag}', Tags) eq true";
+            }
+            
+            var scriptsRequestUrlV2 = $"{repository.Uri}{typeEndpoint}/Search()?{prereleaseFilter}{tagFilterPart}{paginationParam}&{select}";
 
             return HttpRequestCall(requestUrlV2: scriptsRequestUrlV2, out edi);  
         }

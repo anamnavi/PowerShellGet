@@ -74,7 +74,7 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
         /// 
         /// Azure Artifacts does not support querying on tags, so if support this scenario we need to search on the term and then filter
         /// </summary>
-        public override string[] FindTag(string tag, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi)
+        public override string[] FindTag(string[] tags, bool includePrerelease, ResourceType _type, out ExceptionDispatchInfo edi)
         {
             List<string> responses = new List<string>();
 
