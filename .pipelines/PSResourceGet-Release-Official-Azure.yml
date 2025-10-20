@@ -4,29 +4,27 @@
 # Yaml Schema:    https://aka.ms/obpipelines/yaml/schema                        #
 # Support:        https://aka.ms/onebranchsupport                               #
 #################################################################################
+name: PSResourceGet-Release-Official-$(Build.BuildId)
+trigger: none # https://aka.ms/obpipelines/triggers
+pr:
+  branches:
+    include:
+    - master
+    - release*
 
-# This is the OneBranch Release YAML Starter Pipeline.
-# For general guidance on OneBranch Release YAML, visit https://aka.ms/onebranchrelease
-#
-# There are 3 different options for customers to choose from depending on their release scenario:
-#########################################################################################
-# 1. *********** EV2 Azure Release: ***********
-# OneBranch EV2 Managed SDP release should be used to deploy within Azure. This is the standard and recommended path for all C+AI teams.
-# Visit https://aka.ms/releaseyamlforev2 for guidance and examples
-#
-##########################################################################################
-# 2. *********** Non-Azure Release: ***********
-# Examples of applicable scenarios include: publishing packages, publishing to VSTS marketplace, publishing to 3P app stores, ESRP Release, GitHub Release etc.
-# Note: Any release operation to do with Azure subscriptions like service deployments, uploading data to storage accounts, etc. cannot use this pathway.
-# Visit https://aka.ms/releaseyamlfornonazure for guidance and examples
-#
-##########################################################################################
-# 3. *********** Non-EV2 Microsoft-Internal Release: (Only permitted as a stop-gap for internal service teams)*************
-# OneBranch NonEV2 Release can only be used by teams unable to use any other release method.
-# NonEV2 releases can only be done by teams whose product doesn't release outside of Microsoft.
-# Only services meeting all the following criteria can use NonEV2 release as a stop-gap:
-# Service has "External Facing" metadata in service tree set to false (indicating that the customers for this service are internal to Microsoft)
-# Visit https://aka.ms/releaseyamlfornonev2 for guidance and examples
+parameters: # parameters are shown up in ADO UI in a build queue time
+- name: 'debug'
+  displayName: 'Enable debug output'
+  type: boolean
+  default: false
+
+variables:
+  - name: DOTNET_CLI_TELEMETRY_OPTOUT
+    value: 1
+  - name: POWERSHELL_TELEMETRY_OPTOUT
+    value: 1
+  - name: WindowsContainerImage
+    value: onebranch.azurecr.io/windows/ltsc2022/vse2022:latest # Docker image which is used to build the project https://aka.ms/obpipelines/containers
 
 resources:
   repositories:
@@ -36,8 +34,238 @@ resources:
     ref: refs/heads/main
     # https://learn.microsoft.com/en-us/azure/devops/pipelines/process/resources?view=azure-devops&tabs=example#define-a-pipelines-resource
   pipelines:
-  - pipeline: pipelineAlias1  # This is an identifier used to reference the source build pipeline. If you want to download an artifact from the source build pipeline, use this value for the templateContext 'pipeline' input
-    source: PSResourceGet-Official  # Replace this with the name of the build yaml pipeline in ADO that will be consumed in this Release yaml pipeline
+  - pipeline: PSResourceGetBuild 
+    source: PSResourceGet-Official
+
 extends:  # Governed template expands from here which defines over all pipeline orchestration with OneBranch security, Compliance & Governance enabled
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates  # The Official template may only be used by Production-classified pipelines
-  # See examples and documentation at the top of this file for guidance on building out this OneBranch pipeline
+
+stages:
+- stage: PrepForEV2
+  displayName: 'Copy and prep all files needed for EV2 stage'
+  jobs:
+  - job: CopyEV2FilesToArtifact
+    displayName: 'Copy EV2 Files to Artifact'
+    pool:
+      type: linux
+    variables:
+    - name: ob_outputDirectory
+      value: '$(Build.ArtifactStagingDirectory)/ONEBRANCH_ARTIFACT'
+    - name: repoRoot
+      value: '$(Build.SourcesDirectory)'
+    - name: ev2ServiceGroupRootFolder
+      value: '$(Build.SourcesDirectory)/.pipelines/EV2Specs/ServiceGroupRoot'
+    - name: ev2SourceFilesFolder
+      value: '$(Build.SourcesDirectory)/.pipelines/EV2Specs/ServiceGroupRoot/SourceFiles'
+    - group: 'myvariablegroup' # TODO: replace with your own variable group name from ADO
+    - name: ob_sdl_credscan_suppressionsFile
+      value: $(Build.SourcesDirectory)\PowerShell\.config\suppress.json
+    steps:
+    - checkout: self ## the global setting on lfs didn't work
+      lfs: false
+
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        targetPath: '$(Pipeline.Workspace)'
+        artifact: drop_stagebuild_nupkg
+      displayName: 'Download drop_stagebuild_nupkg artifact that has .nupkg file to publish'
+
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'current'
+        targetPath: '$(Pipeline.Workspace)'
+      displayName: 'Download to get .nupkg file'
+
+    - pwsh: |
+        New-Item -Path '$(ev2SourceFilesFolder)' -ItemType Directory
+        $sourceFilesFolderExists = Test-Path -Path '$(ev2SourceFilesFolder)'
+        Write-Verbose -Verbose "Ev2 parameters folder exists: $sourceFilesFolderExists"
+      displayName: 'Create SourceFiles folder under EV2Specs/ServiceGroupRoot folder'
+
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(Pipeline.Workspace)/drop_stagebuild_nupkg/PSResourceGet/signed/PublishedNupkg'
+        Contents: '*.nupkg'
+        TargetFolder: $(ev2SourceFilesFolder)
+
+    - pwsh: |
+        $nupkgFile = Get-ChildItem -Path '$(ev2SourceFilesFolder)' -Filter "*.nupkg" -Recurse | Select-Object -First 1
+        $nupkgFileName = $nupkgFile.Name
+        $nupkgFilePath = $nupkgFile.FullName
+
+        Write-Verbose -Verbose ".nupkg file $nupkgFileName found at $nupkgFilePath"
+
+        $moduleName = "Microsoft.PowerShell.PSResourceGet" # TODO: replace with name of your module to publish
+        $trimmedFileName = $nupkgFileName.Trim(".nupkg")
+        $moduleVersion = $trimmedFileName.Split("$moduleName.", [System.StringSplitOptions]::RemoveEmptyEntries)
+
+        Write-Host "##vso[task.setvariable variable=moduleName;isOutput=true]$moduleName"
+        Write-Host "##vso[task.setvariable variable=moduleVersion;isOutput=true]$moduleVersion"
+
+        Write-Verbose -Verbose "Module to publish info: name '$moduleName' Version '$moduleVersion'"
+      displayName: 'Ensure PSResource .nupkg file is present and extract module name and version'
+
+    - pwsh: |
+        # TODO: make sure the following variables are present in the ADO variable group: ev2_support_email
+        $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'RolloutSpec.json'
+        $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
+        $content.RolloutMetadata.Notification.Email.To = '$(ev2_support_email)'
+        Remove-Item -Path $pathToJsonFile
+        $content | ConvertTo-Json -Depth 4 | Out-File $pathToJsonFile
+      displayName: 'Replace values in RolloutSpecPath.json'
+
+    - pwsh: |
+        # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, managed_identity_clientid, managed_identity_name, subscription_id, resource_group_name
+
+        $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'PSResourceGetReleaseMAR.Rollout.json'
+        $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
+
+        $envVarArrayLen = $content.shellExtensions.launch.environmentVariables.Length
+
+        for ($i=0; $i -lt $envVarArrayLen; $i++)
+        {
+          $name = $($content.shellExtensions.launch.environmentVariables[$i].name)
+          if ($name -eq "NUPKG_PATH")
+          {
+            $content.shellExtensions.launch.environmentVariables[$i].reference.path = "SourceFiles/$(moduleName).$(moduleVersion).nupkg"
+            Write-Verbose -Verbose "Nupkg Path: $($content.shellExtensions.launch.environmentVariables[$i].reference.path)"
+          }
+          elseif ($name -eq "PSRESOURCE_NAME")
+          {
+            $content.shellExtensions.launch.environmentVariables[$i].value = '$(moduleName)'
+            Write-Verbose -Verbose "PSResource Name: $($content.shellExtensions.launch.environmentVariables[$i].value)"
+          }
+          elseif ($name -eq "PSRESOURCE_VERSION")
+          {
+            $content.shellExtensions.launch.environmentVariables[$i].value = '$(moduleVersion)'
+            Write-Verbose -Verbose "PSResource Version: $($content.shellExtensions.launch.environmentVariables[$i].value)"
+          }
+          elseif ($name -eq "DESTINATION_ACR_NAME")
+          {
+            $content.shellExtensions.launch.environmentVariables[$i].value = '$(acr_name)'
+            Write-Verbose -Verbose "ACR Name: $($content.shellExtensions.launch.environmentVariables[$i].value)"
+          }
+          elseif ($name -eq "DESTINATION_ACR_URI")
+          {
+            $content.shellExtensions.launch.environmentVariables[$i].value = '$(acr_uri)'
+            Write-Verbose -Verbose "ACR URI: $($content.shellExtensions.launch.environmentVariables[$i].value)"
+          }
+          elseif ($name -eq "MI_CLIENTID")
+          {
+            $content.shellExtensions.launch.environmentVariables[$i].value = '$(managed_identity_clientid)'
+            Write-Verbose -Verbose "MI Client ID: $($content.shellExtensions.launch.environmentVariables[$i].value)"
+          }
+        }
+
+        $identityString = "/subscriptions/$(subscription_id)/resourcegroups/$(resource_group_name)/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$(managed_identity_name)"
+        $content.shellExtensions.launch.identity.userAssignedIdentities[0] = $identityString
+
+        Remove-Item -Path $pathToJsonFile
+        $content | ConvertTo-Json -Depth 6 | Out-File $pathToJsonFile
+      displayName: 'Replace values in MyProjectPublishMAR.Rollout.json file'
+
+    - pwsh: |
+        # TODO: make sure the following variables are present in the ADO variable group: resource_group_name, subscription_id
+        $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'ServiceModel.json'
+        $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
+        $content.ServiceResourceGroups[0].AzureResourceGroupName = '$(resource_group_name)'
+        $content.ServiceResourceGroups[0].AzureSubscriptionId = '$(subscription_id)'
+
+        Remove-Item -Path $pathToJsonFile
+        $content | ConvertTo-Json -Depth 9 | Out-File $pathToJsonFile
+      displayName: 'Replace values in ServiceModel.json'
+
+    - task: onebranch.pipeline.signing@1
+      inputs:
+        command: 'sign'
+        signing_profile: external_distribution
+        files_to_sign: '*.ps1'
+        search_root: '$(repoRoot)/.pipelines/EV2Specs/ServiceGroupRoot/Shell/Run'
+      displayName: Sign Run.ps1
+  
+    - pwsh: |
+        # folder to tar (ie /Run) must have: Run.ps1 and any other folders/files you want extracted
+        $srcPath = Join-Path '$(repoRoot)/.pipelines/EV2Specs/ServiceGroupRoot' -ChildPath 'Shell'
+        $pathToRunTarFile = Join-Path '$(repoRoot)/.pipelines/EV2Specs/ServiceGroupRoot/Shell' -ChildPath "Run.tar"
+        tar -cvf $pathToRunTarFile -C $srcPath ./Run
+      displayName: 'Create archive for the shell extension'
+
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(repoRoot)/.pipelines'
+        Contents: 'EV2Specs/**'
+        TargetFolder: $(ob_outputDirectory)
+
+- stage: 'Test_Release'
+  displayName: 'Test publish package to MAR with EV2'
+  dependsOn:
+  - PrepForEV2
+  variables:
+    - name: ob_release_environment
+      value: "Test"
+    - name: repoRoot
+      value: $(Build.SourcesDirectory)
+  jobs:
+  - job: Test_ReleaseJob
+    displayName: Publish to MAR
+    pool:
+      type: release
+
+    steps:
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        targetPath: '$(Pipeline.Workspace)'
+        artifact: drop_PrepForEV2_CopyEv2FilesToArtifact
+      displayName: 'Download drop_PrepForEV2_CopyEv2FilesToArtifact artifact that has all files needed'
+
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'current'
+        targetPath: '$(Pipeline.Workspace)'
+      displayName: 'Download to get EV2 Files'
+
+    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
+      displayName: 'Ev2: Publish to MAR'
+      inputs:
+        UseServerMonitorTask: true
+        ConnectedServiceName: 'mar-ev2-deployment'
+        ServiceRootPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot'
+        RolloutSpecPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot/RolloutSpec.json'
+
+- stage: 'Prod_Release'
+  displayName: 'Publish package to MAR with EV2'
+  dependsOn:
+  - PrepForEV2
+  variables:
+    - name: ob_release_environment
+      value: "Production"
+    - name: repoRoot
+      value: $(Build.SourcesDirectory)
+  jobs:
+  - job: Prod_ReleaseJob
+    displayName: Publish to MAR
+    pool:
+      type: release
+
+    steps:
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        targetPath: '$(Pipeline.Workspace)'
+        artifact: drop_PrepForEV2_CopyEv2FilesToArtifact
+      displayName: 'Download drop_PrepForEV2_CopyEv2FilesToArtifact artifact that has all files needed'
+
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'current'
+        targetPath: '$(Pipeline.Workspace)'
+      displayName: 'Download to get EV2 Files'
+
+    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
+      displayName: 'Ev2: Publish to MAR'
+      inputs:
+        UseServerMonitorTask: true
+        EndpointProviderType: ApprovalService
+        ApprovalServiceEnvironment: Production
+        ServiceRootPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot'
+        RolloutSpecPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot/RolloutSpec.json'
+
