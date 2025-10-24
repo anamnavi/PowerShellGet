@@ -38,8 +38,11 @@ resources:
   - pipeline: PSResourceGetBuild 
     source: PSResourceGet-Official
 
-extends:  # Governed template expands from here which defines over all pipeline orchestration with OneBranch security, Compliance & Governance enabled
+extends:
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates  # The Official template may only be used by Production-classified pipelines
+  parameters:
+    globalSdl:
+      tsaOptionsFile: .config\tsaoptions.json
+    stages:
+      - template: /.pipelines/templates/release-publish-mar.yml@self
 
-  stages:
-    - template: /.pipelines/templates/release-publish-mar.yml@self
