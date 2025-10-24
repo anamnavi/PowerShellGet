@@ -21,6 +21,8 @@ stages:
     steps:
     - checkout: self ## the global setting on lfs didn't work
       lfs: false
+      env:
+        ob_restore_phase: true
 
     - download: PSResourceGetBuild
       artifact: 'drop_stagebuild_nupkg'
