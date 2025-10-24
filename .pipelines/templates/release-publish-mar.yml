@@ -22,17 +22,23 @@ stages:
     - checkout: self ## the global setting on lfs didn't work
       lfs: false
 
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        targetPath: '$(Pipeline.Workspace)'
-        artifact: drop_stagebuild_nupkg
-      displayName: 'Download drop_stagebuild_nupkg artifact that has .nupkg file to publish from source pipeline'
+    - download: PSResourceGetBuild
+      artifact: 'drop_stagebuild_nupkg'
+      displayName: 'Download artifact containing .nupkg file from PSResourceGetBuild pipeline'
+      env:
+        ob_restore_phase: true
 
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        buildType: 'current'
-        targetPath: '$(Pipeline.Workspace)'
-      displayName: 'Download to get .nupkg file'
+    # - task: DownloadPipelineArtifact@2
+    #   inputs:
+    #     targetPath: '$(Pipeline.Workspace)'
+    #     artifact: drop_stagebuild_nupkg
+    #   displayName: 'Download drop_stagebuild_nupkg artifact that has .nupkg file to publish from source pipeline'
+
+    # - task: DownloadPipelineArtifact@2
+    #   inputs:
+    #     buildType: 'current'
+    #     targetPath: '$(Pipeline.Workspace)'
+    #   displayName: 'Download to get .nupkg file'
 
     - pwsh: |
         New-Item -Path '$(ev2SourceFilesFolder)' -ItemType Directory
