@@ -15,7 +15,7 @@ stages:
       value: '$(Build.SourcesDirectory)/.pipelines/EV2Specs/ServiceGroupRoot'
     - name: ev2SourceFilesFolder
       value: '$(Build.SourcesDirectory)/.pipelines/EV2Specs/ServiceGroupRoot/SourceFiles'
-    - group: 'PSResourceGetACR' # TODO: replace with your own variable group name from ADO
+    - group: 'SecretManagementAcr' # TODO: replace with your own variable group name from ADO
     - name: ob_sdl_credscan_suppressionsFile
       value: $(Build.SourcesDirectory)\PowerShell\.config\suppress.json
     steps:
@@ -186,43 +186,43 @@ stages:
       displayName: 'Ev2: Publish to MAR'
       inputs:
         UseServerMonitorTask: true
-        ConnectedServiceName: 'mar-ev2-deployment'
+        ConnectedServiceName: 'secretmanagementtoacrtest'
         ServiceRootPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot'
         RolloutSpecPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot/RolloutSpec.json'
 
-- stage: 'Prod_Release'
-  displayName: 'Publish package to MAR with EV2'
-  dependsOn:
-  - PrepForEV2
-  variables:
-    - name: ob_release_environment
-      value: "Production"
-    - name: repoRoot
-      value: $(Build.SourcesDirectory)
-  jobs:
-  - job: Prod_ReleaseJob
-    displayName: Publish to MAR
-    pool:
-      type: release
+# - stage: 'Prod_Release'
+#   displayName: 'Publish package to MAR with EV2'
+#   dependsOn:
+#   - PrepForEV2
+#   variables:
+#     - name: ob_release_environment
+#       value: "Production"
+#     - name: repoRoot
+#       value: $(Build.SourcesDirectory)
+#   jobs:
+#   - job: Prod_ReleaseJob
+#     displayName: Publish to MAR
+#     pool:
+#       type: release
 
-    steps:
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        targetPath: '$(Pipeline.Workspace)'
-        artifact: drop_PrepForEV2_CopyEv2FilesToArtifact
-      displayName: 'Download drop_PrepForEV2_CopyEv2FilesToArtifact artifact that has all files needed'
+#     steps:
+#     - task: DownloadPipelineArtifact@2
+#       inputs:
+#         targetPath: '$(Pipeline.Workspace)'
+#         artifact: drop_PrepForEV2_CopyEv2FilesToArtifact
+#       displayName: 'Download drop_PrepForEV2_CopyEv2FilesToArtifact artifact that has all files needed'
 
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        buildType: 'current'
-        targetPath: '$(Pipeline.Workspace)'
-      displayName: 'Download to get EV2 Files'
+#     - task: DownloadPipelineArtifact@2
+#       inputs:
+#         buildType: 'current'
+#         targetPath: '$(Pipeline.Workspace)'
+#       displayName: 'Download to get EV2 Files'
 
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      displayName: 'Ev2: Publish to MAR'
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: Production
-        ServiceRootPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot'
-        RolloutSpecPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot/RolloutSpec.json'
+#     - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
+#       displayName: 'Ev2: Publish to MAR'
+#       inputs:
+#         UseServerMonitorTask: true
+#         EndpointProviderType: ApprovalService
+#         ApprovalServiceEnvironment: Production
+#         ServiceRootPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot'
+#         RolloutSpecPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot/RolloutSpec.json'
