@@ -39,6 +39,5 @@ resources:
 
 extends:  # Governed template expands from here which defines over all pipeline orchestration with OneBranch security, Compliance & Governance enabled
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates  # The Official template may only be used by Production-classified pipelines
-
-stages:
-  - template: /.pipelines/templates/release-publish-mar.yml@self
+  stages:
+    - template: /.pipelines/templates/release-publish-mar.yml@self
