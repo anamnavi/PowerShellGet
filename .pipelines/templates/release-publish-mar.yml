@@ -10,14 +10,14 @@ stages:
     - name: ob_outputDirectory
       value: '$(Build.ArtifactStagingDirectory)/ONEBRANCH_ARTIFACT'
     - name: repoRoot
-      value: '$(Build.SourcesDirectory)'
+      value: '$(Build.SourcesDirectory)/PSResourceGet'
     - name: ev2ServiceGroupRootFolder
-      value: '$(Build.SourcesDirectory)/.pipelines/EV2Specs/ServiceGroupRoot'
+      value: '$(Build.SourcesDirectory)/PSResourceGet/.pipelines/EV2Specs/ServiceGroupRoot'
     - name: ev2SourceFilesFolder
-      value: '$(Build.SourcesDirectory)/.pipelines/EV2Specs/ServiceGroupRoot/SourceFiles'
+      value: '$(Build.SourcesDirectory)/PSResourceGet/.pipelines/EV2Specs/ServiceGroupRoot/SourceFiles'
     - group: 'SecretManagementAcr' # TODO: replace with your own variable group name from ADO
-    - name: ob_sdl_credscan_suppressionsFile
-      value: $(Build.SourcesDirectory)\PowerShell\.config\suppress.json
+    # - name: ob_sdl_credscan_suppressionsFile
+    #   value: $(Build.SourcesDirectory)\PowerShell\.config\suppress.json
     steps:
     - checkout: self ## the global setting on lfs didn't work
       lfs: false
