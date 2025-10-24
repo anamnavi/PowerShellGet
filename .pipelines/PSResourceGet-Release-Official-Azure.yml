@@ -13,10 +13,10 @@ pr:
     - release*
 
 parameters: # parameters are shown up in ADO UI in a build queue time
-- name: 'debug'
-  displayName: 'Enable debug output'
-  type: boolean
-  default: false
+  - name: 'debug'
+    displayName: 'Enable debug output'
+    type: boolean
+    default: false
 
 variables:
   - name: DOTNET_CLI_TELEMETRY_OPTOUT
@@ -28,16 +28,18 @@ variables:
 
 resources:
   repositories:
-  - repository: templates
-    type: git
-    name: OneBranch.Pipelines/GovernedTemplates
-    ref: refs/heads/main
-    # https://learn.microsoft.com/en-us/azure/devops/pipelines/process/resources?view=azure-devops&tabs=example#define-a-pipelines-resource
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+      # https://learn.microsoft.com/en-us/azure/devops/pipelines/process/resources?view=azure-devops&tabs=example#define-a-pipelines-resource
+
   pipelines:
   - pipeline: PSResourceGetBuild 
     source: PSResourceGet-Official
 
 extends:  # Governed template expands from here which defines over all pipeline orchestration with OneBranch security, Compliance & Governance enabled
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates  # The Official template may only be used by Production-classified pipelines
+
   stages:
     - template: /.pipelines/templates/release-publish-mar.yml@self
