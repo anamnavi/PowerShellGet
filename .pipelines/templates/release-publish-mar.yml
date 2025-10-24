@@ -80,7 +80,7 @@ stages:
       displayName: 'Replace values in RolloutSpecPath.json'
 
     - pwsh: |
-        # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, managed_identity_clientid, managed_identity_name, acr_subscription_id, acr_resource_group_name
+        # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, managed_identity_clientid, managed_identity_name, acr_subscription, acr_resource_group
 
         $moduleResourceName = '$(setImageNameStep.moduleName)'
         $moduleResourceVersion = '$(setImageNameStep.moduleVersion)'
@@ -94,17 +94,17 @@ stages:
           $name = $($content.shellExtensions.launch.environmentVariables[$i].name)
           if ($name -eq "NUPKG_PATH")
           {
-            $content.shellExtensions.launch.environmentVariables[$i].reference.path = "SourceFiles/$moduleResourceName.$moduleResourceVersion.nupkg"
+            $content.shellExtensions.launch.environmentVariables[$i].reference.path = 'SourceFiles/$moduleResourceName.$moduleResourceVersion.nupkg'
             Write-Verbose -Verbose "Nupkg Path: $($content.shellExtensions.launch.environmentVariables[$i].reference.path)"
           }
           elseif ($name -eq "PSRESOURCE_NAME")
           {
-            $content.shellExtensions.launch.environmentVariables[$i].value = '$(moduleName)'
+            $content.shellExtensions.launch.environmentVariables[$i].value = $moduleResourceName
             Write-Verbose -Verbose "PSResource Name: $($content.shellExtensions.launch.environmentVariables[$i].value)"
           }
           elseif ($name -eq "PSRESOURCE_VERSION")
           {
-            $content.shellExtensions.launch.environmentVariables[$i].value = '$(moduleVersion)'
+            $content.shellExtensions.launch.environmentVariables[$i].value = $moduleResourceVersion
             Write-Verbose -Verbose "PSResource Version: $($content.shellExtensions.launch.environmentVariables[$i].value)"
           }
           elseif ($name -eq "DESTINATION_ACR_NAME")
@@ -124,7 +124,7 @@ stages:
           }
         }
 
-        $identityString = "/subscriptions/$(acr_subscription_id)/resourcegroups/$(acr_resource_group_name)/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$(managed_identity_name)"
+        $identityString = "/subscriptions/$(acr_subscription)/resourcegroups/$(acr_resource_group)/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$(managed_identity_name)"
         $content.shellExtensions.launch.identity.userAssignedIdentities[0] = $identityString
 
         Remove-Item -Path $pathToJsonFile
@@ -132,11 +132,11 @@ stages:
       displayName: 'Replace values in MyProjectPublishMAR.Rollout.json file'
 
     - pwsh: |
-        # TODO: make sure the following variables are present in the ADO variable group: acr_resource_group_name, acr_subscription_id
+        # TODO: make sure the following variables are present in the ADO variable group: acr_resource_group, acr_subscription
         $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'ServiceModel.json'
         $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
-        $content.ServiceResourceGroups[0].AzureResourceGroupName = '$(acr_resource_group_name)'
-        $content.ServiceResourceGroups[0].AzureSubscriptionId = '$(acr_subscription_id)'
+        $content.ServiceResourceGroups[0].AzureResourceGroupName = '$(acr_resource_group)'
+        $content.ServiceResourceGroups[0].AzureSubscriptionId = '$(acr_subscription)'
 
         Remove-Item -Path $pathToJsonFile
         $content | ConvertTo-Json -Depth 9 | Out-File $pathToJsonFile
