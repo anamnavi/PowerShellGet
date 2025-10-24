@@ -45,12 +45,16 @@ stages:
         $sourceFilesFolderExists = Test-Path -Path '$(ev2SourceFilesFolder)'
         Write-Verbose -Verbose "Ev2 parameters folder exists: $sourceFilesFolderExists"
       displayName: 'Create SourceFiles folder under EV2Specs/ServiceGroupRoot folder'
+      env:
+        ob_restore_phase: true
 
     - task: CopyFiles@2
       inputs:
         SourceFolder: '$(Pipeline.Workspace)/PSResourceGetBuild/drop_stagebuild_nupkg/PSResourceGet/signed/PublishedNupkg'
         Contents: '*.nupkg'
         TargetFolder: $(ev2SourceFilesFolder)
+      env:
+        ob_restore_phase: true
 
     - pwsh: |
         $nupkgFile = Get-ChildItem -Path '$(ev2SourceFilesFolder)' -Filter "*.nupkg" -Recurse | Select-Object -First 1
@@ -69,6 +73,8 @@ stages:
         Write-Verbose -Verbose "Module to publish info: name '$moduleName' Version '$moduleVersion'"
       displayName: 'Ensure PSResource .nupkg file is present and extract module name and version'
       name: setModuleInfoStep
+      env:
+        ob_restore_phase: true
 
     - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: ev2_support_email
@@ -78,6 +84,8 @@ stages:
         Remove-Item -Path $pathToJsonFile
         $content | ConvertTo-Json -Depth 4 | Out-File $pathToJsonFile
       displayName: 'Replace values in RolloutSpecPath.json'
+      env:
+        ob_restore_phase: true
 
     - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, managed_identity_clientid, managed_identity_name, acr_subscription, acr_resource_group
@@ -130,6 +138,8 @@ stages:
         Remove-Item -Path $pathToJsonFile
         $content | ConvertTo-Json -Depth 6 | Out-File $pathToJsonFile
       displayName: 'Replace values in MyProjectPublishMAR.Rollout.json file'
+      env:
+        ob_restore_phase: true
 
     - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: acr_resource_group, acr_subscription
@@ -141,6 +151,8 @@ stages:
         Remove-Item -Path $pathToJsonFile
         $content | ConvertTo-Json -Depth 9 | Out-File $pathToJsonFile
       displayName: 'Replace values in ServiceModel.json'
+      env:
+        ob_restore_phase: true
 
     - task: onebranch.pipeline.signing@1
       inputs:
