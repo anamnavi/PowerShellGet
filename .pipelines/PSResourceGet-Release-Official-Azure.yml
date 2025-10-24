@@ -23,8 +23,12 @@ variables:
     value: 1
   - name: POWERSHELL_TELEMETRY_OPTOUT
     value: 1
+  - name: ob_sdl_tsa_configFile
+    value: $(Build.SourcesDirectory)\.config\tsaoptions.json
   - name: WindowsContainerImage
     value: onebranch.azurecr.io/windows/ltsc2022/vse2022:latest # Docker image which is used to build the project https://aka.ms/obpipelines/containers
+  - name: LinuxContainerImage
+    value: mcr.microsoft.com/onebranch/azurelinux/build:3.0
 
 resources:
   repositories:
