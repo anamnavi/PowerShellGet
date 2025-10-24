@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/rolloutSpecification.json",
+  "contentVersion": "1.0.0.0",
+  "rolloutMetadata": {
+    "serviceModelPath": "ServiceModel.json",
+    "ScopeBindingsPath": "ScopeBindings.json",
+    "name": "OneBranch-PSResourceGet-MAR-Deployment",
+    "rolloutType": "Major",
+    "buildSource": {
+      "parameters": {
+        "versionFile": "buildver.txt"
+      }
+    },
+    "Notification": {
+      "Email": {
+        "To": "default"
+      }
+    }
+  },
+  "orchestratedSteps": [
+    {
+      "name": "ReleasePSResourceGetToEv2Step",
+      "targetType": "ServiceResource",
+      "targetName": "PSResourceGetToEv2Step",
+      "actions": ["Shell/Run"]
+    }
+  ]
+}

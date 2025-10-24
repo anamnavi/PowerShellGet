@@ -1,0 +1,51 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/serviceModel.json",
+  "contentVersion": "1.0.0.0",
+  "serviceMetadata": {
+    "serviceGroup": "OneBranch-PSResourceGet",
+    "environment": "Test"
+  },
+  "serviceResourceGroupDefinitions": [
+    {
+      "name": "OneBranch-PSResourceGet-RGDef",
+      "serviceResourceDefinitions": [
+        {
+          "name": "OneBranch-PSResourcGet.Shell-SRDef",
+          "composedOf": {
+            "extension": {
+              "shell": [
+                {
+                  "type": "Run",
+                  "properties": {
+                    "imageName": "adm-azurelinux-30-l",
+                    "imageVersion": "v2"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "serviceResourceGroups": [
+    {
+      "azureResourceGroupName": "default",
+      "location": "East US",
+      "instanceOf": "OneBranch-PSResourceGet-RGDef",
+      "azureSubscriptionId": "default",
+        "scopeTags": [
+          {
+            "name": "Global"
+          }
+        ],
+      "serviceResources": [
+        {
+          "Name": "PSResourceGetToEv2Step",
+          "InstanceOf": "OneBranch-PSResourcGet.Shell-SRDef",
+          "RolloutParametersPath": "PSResourceGetReleaseMAR.Rollout.json"
+        }
+      ]
+    }
+  ]
+}
