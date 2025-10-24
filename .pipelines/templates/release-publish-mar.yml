@@ -83,7 +83,7 @@ stages:
         ob_restore_phase: true
 
     - pwsh: |
-        Get-ChildItem '$(Build.SourcesDirectory)'
+        Get-ChildItem '$(Build.SourcesDirectory)' -Recurse | Out-String -Stream | write-Verbose -Verbose
       displayName: 'Capture BuildDirectory'
       env:
         ob_restore_phase: true
