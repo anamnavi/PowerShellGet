@@ -68,6 +68,7 @@ stages:
 
         Write-Verbose -Verbose "Module to publish info: name '$moduleName' Version '$moduleVersion'"
       displayName: 'Ensure PSResource .nupkg file is present and extract module name and version'
+      name: setModuleInfoStep
 
     - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: ev2_support_email
@@ -81,6 +82,8 @@ stages:
     - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, managed_identity_clientid, managed_identity_name, acr_subscription_id, acr_resource_group_name
 
+        $moduleResourceName = '$(setImageNameStep.moduleName)'
+        $moduleResourceVersion = '$(setImageNameStep.moduleVersion)'
         $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'PSResourceGetReleaseMAR.Rollout.json'
         $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
 
@@ -91,7 +94,7 @@ stages:
           $name = $($content.shellExtensions.launch.environmentVariables[$i].name)
           if ($name -eq "NUPKG_PATH")
           {
-            $content.shellExtensions.launch.environmentVariables[$i].reference.path = "SourceFiles/$(moduleName).$(moduleVersion).nupkg"
+            $content.shellExtensions.launch.environmentVariables[$i].reference.path = "SourceFiles/$moduleResourceName.$moduleResourceVersion.nupkg"
             Write-Verbose -Verbose "Nupkg Path: $($content.shellExtensions.launch.environmentVariables[$i].reference.path)"
           }
           elseif ($name -eq "PSRESOURCE_NAME")
