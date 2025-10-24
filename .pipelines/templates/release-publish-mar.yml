@@ -48,7 +48,7 @@ stages:
 
     - task: CopyFiles@2
       inputs:
-        SourceFolder: '$(Pipeline.Workspace)/drop_stagebuild_nupkg/PSResourceGet/signed/PublishedNupkg'
+        SourceFolder: '$(Pipeline.Workspace)/PSResourceGetBuild/drop_stagebuild_nupkg/PSResourceGet/signed/PublishedNupkg'
         Contents: '*.nupkg'
         TargetFolder: $(ev2SourceFilesFolder)
 
