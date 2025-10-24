@@ -78,7 +78,8 @@ stages:
 
     - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: ev2_support_email
-        $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'RolloutSpec.json'
+        # $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'RolloutSpec.json'
+        $pathToJsonFile = Join-Path -Path '$(Pipeline.Workspace)/PSResourceGet/.pipelines/EV2Specs/ServiceGroupRoot' -ChildPath 'RolloutSpec.json'
         $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
         $content.RolloutMetadata.Notification.Email.To = '$(ev2_support_email)'
         Remove-Item -Path $pathToJsonFile
