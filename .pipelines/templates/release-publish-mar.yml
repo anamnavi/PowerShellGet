@@ -77,9 +77,27 @@ stages:
         ob_restore_phase: true
 
     - pwsh: |
+        Get-ChildItem Env: | Out-String -Stream | write-Verbose -Verbose
+      displayName: 'Capture Environment Variables'
+      env:
+        ob_restore_phase: true
+
+    - pwsh: |
+        Get-ChildItem '$(Build.SourcesDirectory)'
+      displayName: 'Capture BuildDirectory'
+      env:
+        ob_restore_phase: true
+
+    - pwsh: |
+        Get-ChildItem '$(Pipeline.Workspace)' -Recurse | Out-String -Stream | write-Verbose -Verbose
+      displayName: 'Capture Workspace'
+      env:
+        ob_restore_phase: true
+
+    - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: ev2_support_email
         # $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'RolloutSpec.json'
-        $pathToJsonFile = Join-Path -Path '$(Pipeline.Workspace)/PSResourceGet/.pipelines/EV2Specs/ServiceGroupRoot' -ChildPath 'RolloutSpec.json'
+        $pathToJsonFile = Join-Path -Path '$(repoRoot)/.pipelines/EV2Specs/ServiceGroupRoot' -ChildPath 'RolloutSpec.json'
         $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
         $content.RolloutMetadata.Notification.Email.To = '$(ev2_support_email)'
         Remove-Item -Path $pathToJsonFile
