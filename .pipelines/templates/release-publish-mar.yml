@@ -97,11 +97,11 @@ stages:
         ob_restore_phase: true
 
     - pwsh: |
-        # TODO: make sure the following variables are present in the ADO variable group: ev2_support_email
+        # TODO: make sure the following variables are present in the ADO variable group: email_address
         # $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'RolloutSpec.json'
         $pathToJsonFile = Join-Path -Path '$(repoRoot)/.pipelines/EV2Specs/ServiceGroupRoot' -ChildPath 'RolloutSpec.json'
         $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
-        $content.RolloutMetadata.Notification.Email.To = '$(ev2_support_email)'
+        $content.RolloutMetadata.Notification.Email.To = '$(email_address)'
         Remove-Item -Path $pathToJsonFile
         $content | ConvertTo-Json -Depth 4 | Out-File $pathToJsonFile
       displayName: 'Replace values in RolloutSpecPath.json'
@@ -111,8 +111,8 @@ stages:
     - pwsh: |
         # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, managed_identity_clientid, managed_identity_name, acr_subscription, acr_resource_group
 
-        $moduleResourceName = '$(setImageNameStep.moduleName)'
-        $moduleResourceVersion = '$(setImageNameStep.moduleVersion)'
+        $moduleResourceName = '$(setModuleInfoStep.moduleName)'
+        $moduleResourceVersion = '$(setModuleInfoStep.moduleVersion)'
         $pathToJsonFile = Join-Path -Path '$(ev2ServiceGroupRootFolder)' -ChildPath 'PSResourceGetReleaseMAR.Rollout.json'
         $content = Get-Content -Path $pathToJsonFile | ConvertFrom-Json
 
@@ -123,7 +123,7 @@ stages:
           $name = $($content.shellExtensions.launch.environmentVariables[$i].name)
           if ($name -eq "NUPKG_PATH")
           {
-            $content.shellExtensions.launch.environmentVariables[$i].reference.path = 'SourceFiles/$moduleResourceName.$moduleResourceVersion.nupkg'
+            $content.shellExtensions.launch.environmentVariables[$i].reference.path = "SourceFiles/$moduleResourceName.$moduleResourceVersion.nupkg"
             Write-Verbose -Verbose "Nupkg Path: $($content.shellExtensions.launch.environmentVariables[$i].reference.path)"
           }
           elseif ($name -eq "PSRESOURCE_NAME")
