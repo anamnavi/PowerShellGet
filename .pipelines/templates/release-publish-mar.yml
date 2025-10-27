@@ -109,7 +109,7 @@ stages:
         ob_restore_phase: true
 
     - pwsh: |
-        # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, managed_identity_clientid, managed_identity_name, acr_subscription, acr_resource_group
+        # TODO: make sure the following variables are present in the ADO variable group: acr_name, acr_uri, test_managed_identity_clientid, test_managed_identity_name, acr_subscription, acr_resource_group
 
         $moduleResourceName = '$(setImageNameStep.moduleName)'
         $moduleResourceVersion = '$(setImageNameStep.moduleVersion)'
@@ -148,12 +148,12 @@ stages:
           }
           elseif ($name -eq "MI_CLIENTID")
           {
-            $content.shellExtensions.launch.environmentVariables[$i].value = '$(managed_identity_clientid)'
+            $content.shellExtensions.launch.environmentVariables[$i].value = '$(test_managed_identity_clientid)'
             Write-Verbose -Verbose "MI Client ID: $($content.shellExtensions.launch.environmentVariables[$i].value)"
           }
         }
 
-        $identityString = "/subscriptions/$(acr_subscription)/resourcegroups/$(acr_resource_group)/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$(managed_identity_name)"
+        $identityString = "/subscriptions/$(acr_subscription)/resourcegroups/$(acr_resource_group)/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$(test_managed_identity_name)"
         $content.shellExtensions.launch.identity.userAssignedIdentities[0] = $identityString
 
         Remove-Item -Path $pathToJsonFile
