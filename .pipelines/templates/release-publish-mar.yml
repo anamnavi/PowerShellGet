@@ -229,7 +229,7 @@ stages:
       displayName: 'Ev2: Publish to MAR'
       inputs:
         UseServerMonitorTask: true
-        ConnectedServiceName: 'secretmanagementtoacrtest'
+        ConnectedServiceName: 'psresource-mar-ev2-deployment'
         ServiceRootPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot'
         RolloutSpecPath: '$(Pipeline.Workspace)/drop_PrepForEV2_CopyEV2FilesToArtifact/EV2Specs/ServiceGroupRoot/RolloutSpec.json'
 
