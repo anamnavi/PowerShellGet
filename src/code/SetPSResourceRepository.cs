@@ -7,6 +7,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Xml;
 
 using Dbg = System.Diagnostics.Debug;
 
@@ -103,6 +107,10 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
         [Parameter]
         public SwitchParameter PassThru { get; set; }
 
+        [Parameter(ParameterSetName = "Typosquatting")]
+        [Parameter]
+        public int DaysBack { get; set; }
+
         #endregion
 
         #region DynamicParameters
@@ -135,6 +143,84 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
 
         protected override void ProcessRecord()
         {
+            if (ParameterSetName.Equals("Typosquatting"))
+            {
+                // Console.WriteLine($"in psset, with daysback: {-DaysBack}");
+
+                int newDaysBack = -2;
+                DateTime lastPublishedDateUtc = DateTime.UtcNow.AddDays(newDaysBack);
+                string checkpoint = lastPublishedDateUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                // Console.WriteLine($"checkpoint: {checkpoint}");
+
+                string filter = $"{System.Uri.EscapeDataString($"Published gt datetime'{checkpoint}'")}";
+                string inlineCount = $"allpages";
+                bool includePrerelease = true;
+                int downloadBatchSize = 100;
+                int i = 0;
+
+                List<string> responses = new List<string>();
+
+                int skip = i;
+                int top = downloadBatchSize;
+
+                string requestUrlV2 = $"https://www.powershellgallery.com/api/v2/Search()?$filter={filter}&$inlinecount={inlineCount}&$skip={skip}&$top={top}&$orderby=Id+desc&includePrerelease={includePrerelease}";
+                // Console.WriteLine(requestUrlV2);
+                string response = HttpRequestCall(requestUrlV2, out ErrorRecord errRecord);
+                responses.Add(response);
+                int initialCount = GetCountFromResponse(response, out errRecord);  // count = 4
+                Console.WriteLine($"Initial count from response: {initialCount}");
+
+
+                // // If count is 0, early out as this means no packages matching search criteria were found
+                if (initialCount == 0)
+                {
+                    return;
+                }
+
+                int count = (int)Math.Ceiling((double)(initialCount / 100));
+                // if more than 100 count, loop and add response to list
+                while (count > 0)
+                {
+                    // Console.WriteLine($"Count is '{count}'");
+                    // skip 100
+                    skip += downloadBatchSize;
+                    requestUrlV2 = $"https://www.powershellgallery.com/api/v2/Search()?$filter={filter}&$inlinecount={inlineCount}&$skip={skip}&$top={top}&$orderby=Id+desc&includePrerelease={includePrerelease}";
+                    response = HttpRequestCall(requestUrlV2, out errRecord);
+                    if (errRecord != null)
+                    {
+                        Console.WriteLine($"Error in HTTP request: {errRecord.Exception.Message}");
+                    }
+
+                    responses.Add(response);
+                    count--;
+                }
+
+                // process responses
+                int skippedPkgs = 0;
+                int totalPkgs = 0;
+                List<Dictionary<string, string>> foundPkgsDictList = new List<Dictionary<string, string>>();
+                foreach (string currentResponse in responses)
+                {
+                    Console.WriteLine("Processing response...");
+                    // todo: get name, version, owners
+                    var foundPkgsDictArray = ConvertResponseToXML(currentResponse, out int currentSkippedPkgs, out int currentTotalPkgs);
+                    foundPkgsDictList.AddRange(foundPkgsDictArray);
+                    skippedPkgs += currentSkippedPkgs;
+                    totalPkgs += currentTotalPkgs;
+                }
+
+                Console.WriteLine($"Total packages skipped/processed: {skippedPkgs}/{totalPkgs}");
+                foreach (var pkg in foundPkgsDictList)
+                {
+                    Console.WriteLine($"Package found: Name='{pkg["Name"]}', Version='{pkg["Version"]}', Owners='{pkg["Owners"]}'");
+                }
+
+                return;
+            }
+
+
+
+
             // determine if either 1 of 5 values are attempting to be set: Uri, Priority, Trusted, APIVersion, CredentialInfo.
             // if none are (i.e only Name parameter was provided, write error)
             if (ParameterSetName.Equals(NameParameterSet) &&
@@ -348,6 +434,238 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
 
                 return null;
             }
+        }
+
+        private string HttpRequestCall(string requestUrlV2, out ErrorRecord errRecord)
+        {
+            // Console.WriteLine("In V2ServerAPICalls::HttpRequestCall()");
+            errRecord = null;
+            string response = string.Empty;
+
+            HttpClientHandler handler = new HttpClientHandler();
+            handler.Credentials = null;
+            HttpClient sessionClient = new HttpClient(handler);
+            sessionClient.Timeout = TimeSpan.FromMinutes(10);
+
+            try
+            {
+                // Console.WriteLine($"Request url is '{requestUrlV2}'");
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, requestUrlV2);
+
+                response = SendV2RequestAsync(request, sessionClient).GetAwaiter().GetResult();
+            }
+            catch (ResourceNotFoundException e)
+            {
+                errRecord = new ErrorRecord(
+                    exception: e,
+                    "ResourceNotFound",
+                    ErrorCategory.InvalidResult,
+                    this);
+            }
+            catch (UnauthorizedException e)
+            {
+                errRecord = new ErrorRecord(
+                    exception: e,
+                    "UnauthorizedRequest",
+                    ErrorCategory.InvalidResult,
+                    this);
+            }
+            catch (HttpRequestException e)
+            {
+                errRecord = new ErrorRecord(
+                    exception: e,
+                    "HttpRequestCallFailure",
+                    ErrorCategory.ConnectionError,
+                    this);
+            }
+            catch (Exception e)
+            {
+                errRecord = new ErrorRecord(
+                    exception: e,
+                    "HttpRequestCallFailure",
+                    ErrorCategory.ConnectionError,
+                    this);
+            }
+
+            if (string.IsNullOrEmpty(response))
+            {
+                // Console.WriteLine("Response is empty");
+            }
+
+            return response;
+        }
+
+        public static async Task<string> SendV2RequestAsync(HttpRequestMessage message, HttpClient s_client)
+        {
+            HttpStatusCode responseStatusCode = HttpStatusCode.OK;
+            try
+            {
+                HttpResponseMessage response = await s_client.SendAsync(message);
+                responseStatusCode = response.StatusCode;
+                response.EnsureSuccessStatusCode();
+
+                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            }
+            catch (HttpRequestException e)
+            {
+                if (responseStatusCode.Equals(HttpStatusCode.NotFound))
+                {
+                    throw new ResourceNotFoundException(Utils.FormatRequestsExceptions(e, message));
+                }
+                // ADO feed will return a 401 if a package does not exist on the feed, with the following message:
+                // 401 (Unauthorized - No local versions of package 'NonExistentModule'; please provide authentication to access
+                // versions from upstream that have not yet been saved to your feed. (DevOps Activity ID: 5E5CF528-5B3D-481D-95B5-5DDB5476D7EF))
+                if (responseStatusCode.Equals(HttpStatusCode.Unauthorized))
+                {
+                    if (e.Message.Contains("access versions from upstream that have not yet been saved to your feed"))
+                    {
+                        throw new ResourceNotFoundException(Utils.FormatRequestsExceptions(e, message));
+                    }
+
+                    throw new UnauthorizedException(Utils.FormatCredentialRequestExceptions(e));
+                }
+
+                throw new HttpRequestException(Utils.FormatRequestsExceptions(e, message));
+            }
+            catch (ArgumentNullException e)
+            {
+                throw new ArgumentNullException(Utils.FormatRequestsExceptions(e, message));
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new InvalidOperationException(Utils.FormatRequestsExceptions(e, message));
+            }
+        }
+
+        public int GetCountFromResponse(string httpResponse, out ErrorRecord errRecord)
+        {
+            errRecord = null;
+            int count = 0;
+
+            //Create the XmlDocument.
+            XmlDocument doc = new XmlDocument();
+
+            try
+            {
+                doc.LoadXml(httpResponse);
+
+                bool countSearchSucceeded = false;
+                XmlNodeList elemList = doc.GetElementsByTagName("m:count");
+                if (elemList.Count > 0)
+                {
+                    countSearchSucceeded = true;
+                    XmlNode node = elemList[0];
+                    if (node == null || String.IsNullOrWhiteSpace(node.InnerText))
+                    {
+                        countSearchSucceeded = false;
+                        errRecord = new ErrorRecord(
+                            new PSArgumentException("Count property from server response was empty, invalid or not present."),
+                            "GetCountFromResponseFailure",
+                            ErrorCategory.InvalidData,
+                            this);
+                    }
+                    else
+                    {
+                        countSearchSucceeded = int.TryParse(node.InnerText, out count);
+                    }
+                }
+
+                if (!countSearchSucceeded)
+                {
+                             // Note: not all V2 servers may have the 'count' property implemented or valid (i.e CloudSmith server), in this case try to get 'd:Id' property.
+                    elemList = doc.GetElementsByTagName("d:Id");
+                    if (elemList.Count > 0)
+                    {
+                        count = elemList.Count;
+                        errRecord = null;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Property 'count' and 'd:Id' could not be found in response. This may indicate that the package could not be found");
+                    }
+                }
+            }
+            catch (XmlException e)
+            {
+                errRecord = new ErrorRecord(
+                    exception: e,
+                    "GetCountFromResponse",
+                    ErrorCategory.InvalidData,
+                    this);
+            }
+
+            return count;
+        }
+
+        public Dictionary<string, string>[] ConvertResponseToXML(string httpResponse, out int skippedPkgs, out int totalPkgs) {
+            skippedPkgs = 0;
+            totalPkgs = 0;
+
+            //Create the XmlDocument.
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(httpResponse);
+
+            XmlNodeList entryNode = doc.GetElementsByTagName("entry");
+
+            List<Dictionary<string, string>> packagesFound = new List<Dictionary<string, string>>();
+            for (int i = 0; i < entryNode.Count; i++)
+            {
+                XmlNode node = entryNode[i];
+                totalPkgs++;
+                string packageName = "";
+                string packageVersion = "";
+                string[] owners = new string[] {};
+                var entryChildNodes = node.ChildNodes;
+                foreach (XmlElement childNode in entryChildNodes)
+                {
+                    var entryKey = childNode.LocalName;
+                    if (entryKey.Equals("properties"))
+                    {
+                        var propertyChildNodes = childNode.ChildNodes;
+                        foreach (XmlElement propertyChild in propertyChildNodes)
+                        {
+                            var propertyKey = propertyChild.LocalName;
+                            var propertyValue = propertyChild.InnerText;
+                            if (propertyKey.Equals("NormalizedVersion"))
+                            {
+                                packageVersion = propertyValue;
+                            }
+                            else if (propertyKey.Equals("Id"))
+                            {
+                                packageName = propertyValue;
+                            }
+                            else if (propertyKey.Equals("Owners"))
+                            {
+                                owners = propertyValue.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                            }
+                        }
+
+                        if (owners.Contains("aws-dotnet-sdk-team") ||
+                            owners.Contains("azure-sdk") ||
+                            owners.Contains("oci-psmodules-grp"))
+                        {
+                            // Console.WriteLine($"Skipping package {packageName} owned by owner {string.Join(" ", owners)}.");
+                            skippedPkgs++;
+                            break;
+                        }
+
+                        Dictionary<string, string> packageInfo = new Dictionary<string, string>
+                        {
+                            { "Name", packageName },
+                            { "Version", packageVersion },
+                            { "Owners", string.Join(" ", owners) }
+                        };
+
+                        packagesFound.Add(packageInfo);
+
+                        break; // don't care about rest of the childNode's keys
+                    }
+                }
+
+                // Console.WriteLine($"Package found: Name='{packageName}', Version='{packageVersion}', Owners='{string.Join(" ", owners)}'");
+            }
+
+            return packagesFound.ToArray();
         }
 
         #endregion

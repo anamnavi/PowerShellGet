@@ -58,11 +58,13 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
 
             if(networkCredential != null)
             {
+                Console.WriteLine("network credential not null");
                 token = String.Equals("token", networkCredential.UserName) ? true : false;
             };
 
             if (token)
             {
+                Console.WriteLine("Using token authentication");
                 string credString = string.Format(":{0}", networkCredential.Password);
                 byte[] byteArray = Encoding.ASCII.GetBytes(credString);
 
@@ -70,7 +72,7 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
                 _sessionClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
 
             } else {
-
+                Console.WriteLine("token null");
                 handler.Credentials = networkCredential;
 
                 _sessionClient = new HttpClient(handler);
@@ -935,7 +937,8 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
                 }
             }
 
-            var requestUrlV2 = $"{Repository.Uri}{typeEndpoint}/Search()?{queryBuilder.BuildQueryString()}";
+            // var requestUrlV2 = $"{Repository.Uri}{typeEndpoint}/Search()?{queryBuilder.BuildQueryString()}";
+            var requestUrlV2 = "https://www.powershellgallery.com/api/v2/Search()?$filter=IsLatestVersion&$inlinecount=allpages&$skip=0&$top=100&$orderby=Id+desc&includePrerelease=True";
             return HttpRequestCall(requestUrlV2, out errRecord);
         }
 
