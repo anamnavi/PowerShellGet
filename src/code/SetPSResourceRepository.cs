@@ -145,77 +145,86 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
         {
             if (ParameterSetName.Equals("Typosquatting"))
             {
-                // Console.WriteLine($"in psset, with daysback: {-DaysBack}");
 
-                int newDaysBack = -2;
-                DateTime lastPublishedDateUtc = DateTime.UtcNow.AddDays(newDaysBack);
-                string checkpoint = lastPublishedDateUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                // Console.WriteLine($"checkpoint: {checkpoint}");
-
-                string filter = $"{System.Uri.EscapeDataString($"Published gt datetime'{checkpoint}'")}";
-                string inlineCount = $"allpages";
-                bool includePrerelease = true;
-                int downloadBatchSize = 100;
-                int i = 0;
-
-                List<string> responses = new List<string>();
-
-                int skip = i;
-                int top = downloadBatchSize;
-
-                string requestUrlV2 = $"https://www.powershellgallery.com/api/v2/Search()?$filter={filter}&$inlinecount={inlineCount}&$skip={skip}&$top={top}&$orderby=Id+desc&includePrerelease={includePrerelease}";
-                // Console.WriteLine(requestUrlV2);
-                string response = HttpRequestCall(requestUrlV2, out ErrorRecord errRecord);
-                responses.Add(response);
-                int initialCount = GetCountFromResponse(response, out errRecord);  // count = 4
-                Console.WriteLine($"Initial count from response: {initialCount}");
-
-
-                // // If count is 0, early out as this means no packages matching search criteria were found
-                if (initialCount == 0)
-                {
-                    return;
-                }
-
-                int count = (int)Math.Ceiling((double)(initialCount / 100));
-                // if more than 100 count, loop and add response to list
-                while (count > 0)
-                {
-                    // Console.WriteLine($"Count is '{count}'");
-                    // skip 100
-                    skip += downloadBatchSize;
-                    requestUrlV2 = $"https://www.powershellgallery.com/api/v2/Search()?$filter={filter}&$inlinecount={inlineCount}&$skip={skip}&$top={top}&$orderby=Id+desc&includePrerelease={includePrerelease}";
-                    response = HttpRequestCall(requestUrlV2, out errRecord);
-                    if (errRecord != null)
-                    {
-                        Console.WriteLine($"Error in HTTP request: {errRecord.Exception.Message}");
-                    }
-
-                    responses.Add(response);
-                    count--;
-                }
-
-                // process responses
-                int skippedPkgs = 0;
-                int totalPkgs = 0;
-                List<Dictionary<string, string>> foundPkgsDictList = new List<Dictionary<string, string>>();
-                foreach (string currentResponse in responses)
-                {
-                    Console.WriteLine("Processing response...");
-                    // todo: get name, version, owners
-                    var foundPkgsDictArray = ConvertResponseToXML(currentResponse, out int currentSkippedPkgs, out int currentTotalPkgs);
-                    foundPkgsDictList.AddRange(foundPkgsDictArray);
-                    skippedPkgs += currentSkippedPkgs;
-                    totalPkgs += currentTotalPkgs;
-                }
-
-                Console.WriteLine($"Total packages skipped/processed: {skippedPkgs}/{totalPkgs}");
-                foreach (var pkg in foundPkgsDictList)
-                {
-                    Console.WriteLine($"Package found: Name='{pkg["Name"]}', Version='{pkg["Version"]}', Owners='{pkg["Owners"]}'");
-                }
-
+                RunAsync();
                 return;
+
+
+
+                // // Console.WriteLine($"in psset, with daysback: {-DaysBack}");
+
+                // int newDaysBack = -1;
+                // DateTime lastPublishedDateUtc = DateTime.UtcNow.AddDays(newDaysBack);
+                // string checkpoint = lastPublishedDateUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                // // Console.WriteLine($"checkpoint: {checkpoint}");
+
+                // string filter = $"{System.Uri.EscapeDataString($"Published gt datetime'{checkpoint}'")}";
+                // string orderBy = "Published";
+                // string inlineCount = $"allpages";
+                // bool includePrerelease = true;
+                // int downloadBatchSize = 1;
+                // int i = 0;
+
+                // List<string> responses = new List<string>();
+
+                // int skip = i;
+                // int top = downloadBatchSize;
+
+                // string requestUrlV2 = $"https://www.powershellgallery.com/api/v2/Search()?$filter={filter}&$inlinecount={inlineCount}&$skip={skip}&$top={top}&$orderby={orderBy}&includePrerelease={includePrerelease}";
+                // Console.WriteLine(requestUrlV2);
+                // string response = HttpRequestCall(requestUrlV2, out ErrorRecord errRecord);
+                // Console.WriteLine("response" + response);
+                // responses.Add(response);
+                // // int initialCount = GetCountFromResponse(response, out errRecord);  // count = 4
+                // // Console.WriteLine($"Initial count from response: {initialCount}");
+
+
+                // // // // If count is 0, early out as this means no packages matching search criteria were found
+                // // if (initialCount == 0)
+                // // {
+                // //     return;
+                // // }
+
+                // // int count = (int)Math.Ceiling((double)(initialCount / 100));
+                // // // if more than 100 count, loop and add response to list
+                // // while (count > 0)
+                // // {
+                // //     // Console.WriteLine($"Count is '{count}'");
+                // //     // skip 100
+                // //     skip += downloadBatchSize;
+                // //     requestUrlV2 = $"https://www.powershellgallery.com/api/v2/Search()?$filter={filter}&$inlinecount={inlineCount}&$skip={skip}&$top={top}&$orderby=Id+desc&includePrerelease={includePrerelease}";
+                // //     response = HttpRequestCall(requestUrlV2, out errRecord);
+                // //     if (errRecord != null)
+                // //     {
+                // //         Console.WriteLine($"Error in HTTP request: {errRecord.Exception.Message}");
+                // //     }
+
+                // //     // Console.WriteLine("response" + response);
+                // //     responses.Add(response);
+                // //     count--;
+                // // }
+
+                // // process responses
+                // int skippedPkgs = 0;
+                // int totalPkgs = 0;
+                // List<Dictionary<string, string>> foundPkgsDictList = new List<Dictionary<string, string>>();
+                // foreach (string currentResponse in responses)
+                // {
+                //     Console.WriteLine("Processing response...");
+                //     // todo: get name, version, owners
+                //     var foundPkgsDictArray = ConvertResponseToXML(currentResponse, out int currentSkippedPkgs, out int currentTotalPkgs);
+                //     foundPkgsDictList.AddRange(foundPkgsDictArray);
+                //     skippedPkgs += currentSkippedPkgs;
+                //     totalPkgs += currentTotalPkgs;
+                // }
+
+                // Console.WriteLine($"Total packages skipped/processed: {skippedPkgs}/{totalPkgs}");
+                // foreach (var pkg in foundPkgsDictList)
+                // {
+                //     Console.WriteLine($"Package found: Name='{pkg["Name"]}', Version='{pkg["Version"]}', Owners='{pkg["Owners"]}'");
+                // }
+
+                // return;
             }
 
 
@@ -597,7 +606,7 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
             return count;
         }
 
-        public Dictionary<string, string>[] ConvertResponseToXML(string httpResponse, out int skippedPkgs, out int totalPkgs) {
+        public Dictionary<string, string>[] ConvertResponseToXML2(string httpResponse, out int skippedPkgs, out int totalPkgs) {
             skippedPkgs = 0;
             totalPkgs = 0;
 
@@ -666,6 +675,206 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
             }
 
             return packagesFound.ToArray();
+        }
+
+        public void RunAsync()
+        {
+            bool searchSuccess = false;
+            bool downloadSuccess = false;
+
+            int newDaysBack = -1;
+            DateTime lastPublishedDateUtc = DateTime.UtcNow.AddDays(newDaysBack);
+            string checkpoint = lastPublishedDateUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+            string filter = $"{System.Uri.EscapeDataString($"Published gt datetime'{checkpoint}'")}";
+            string orderBy = "Published";
+            string inlineCount = $"allpages";
+            bool includePrerelease = true;
+            int skip = 0;
+            int top = 1;
+
+            Dictionary<string, string> foundPkgDict = new Dictionary<string, string>();
+            bool pkgFound = true;
+
+            // ping endpoint
+            HttpClient client = new HttpClient();
+            client.BaseAddress = new Uri("https://www.powershellgallery.com");
+
+            string requestUrlV2 = $"https://www.powershellgallery.com/api/v2/Search()?$filter={filter}&$inlinecount={inlineCount}&$skip={skip}&$top={top}&$orderby={orderBy}&includePrerelease={includePrerelease}";
+            // string response = HttpRequestCall(requestUrlV2, out ErrorRecord errRecord);
+            string response = GetAsyncWithRetryStorage(client, requestUrlV2, "Find latest published pkg").Result;
+            if (string.IsNullOrEmpty(response))
+            {
+                pkgFound = false;
+            }
+            
+            if (pkgFound)
+            {
+                // process response
+                foundPkgDict = ConvertResponseToXML(response);
+                if (foundPkgDict.Count == 0)
+                {
+                    pkgFound = false;
+                }
+            }
+
+            string queryPkgName = foundPkgDict["Name"];
+            string queryPkgVersion = foundPkgDict["Version"];
+
+            Console.WriteLine($"pkgName: {queryPkgName}  version: {queryPkgVersion}");
+
+            // search for a pkg
+            searchSuccess = GetAsyncWithRetry(client, "https://www.powershellgallery.com/packages/testmodule99/0.0.5", "Ping search").Result;
+            var searchResults = searchSuccess ? 1 : 0;
+
+            // download a pkg
+            if (!pkgFound)
+            {
+                downloadSuccess = true;
+            }
+            else
+            {
+                string downloadQueryUrl = $"https://www.powershellgallery.com/api/v2/package/{queryPkgName}/{queryPkgVersion}";
+                downloadSuccess = GetAsyncWithRetry(client, downloadQueryUrl, "Ping download").Result;
+            }
+
+            var downloadResults = downloadSuccess ? 1 : 0;
+
+            // verify package download elapsed time is less than 5 seconds
+            bool perfSuccess = downloadSuccess;
+            var perfResults = perfSuccess ? 1 : 0;
+
+            Console.WriteLine($"Download success {downloadSuccess}");
+        }
+
+        private async Task<bool> GetAsyncWithRetry(HttpClient client, string urlToTest, string testName)
+        {
+            const int maxRetryCount = 5;
+            const int retryInterval = 3000;
+            int iteration = 0;
+            bool success = false;
+
+            do
+            {
+                HttpResponseMessage pingResponse;
+                try
+                {
+                    pingResponse = await client.GetAsync(urlToTest);
+                    success = pingResponse.IsSuccessStatusCode;
+                    iteration++;
+                }
+                catch (Exception ex)
+                {
+                    // HttpClient.GetAsync() can throw 3 exceptions: TaskCancelledException, HttpRequestException, InvalidOperationException
+                    success = false;
+                    iteration++;
+                }
+
+                if (!success)
+                {
+                    await Task.Delay(retryInterval);
+                }
+            }
+            while (iteration < maxRetryCount && !success);
+
+            return success;
+        }
+
+        private async Task<string> GetAsyncWithRetryStorage(HttpClient client, string urlToTest, string testName)
+        {
+            const int maxRetryCount = 5;
+            const int retryInterval = 3000;
+            int iteration = 0;
+            bool success = false;
+            string response = string.Empty;
+
+            do
+            {
+                HttpResponseMessage pingResponse;
+                try
+                {
+                    pingResponse = await client.GetAsync(urlToTest);
+                    success = pingResponse.IsSuccessStatusCode;
+
+                    if (success)
+                    {
+                        response = pingResponse.Content.ReadAsStringAsync().Result;
+                    }
+
+                    iteration++;
+                }
+                catch (Exception ex)
+                {
+                    // HttpClient.GetAsync() can throw 3 exceptions: TaskCancelledException, HttpRequestException, InvalidOperationException
+                    success = false;
+                    iteration++;
+                }
+
+                if (!success)
+                {
+                    await Task.Delay(retryInterval);
+
+                    // restart the watch to not count the retry wait
+                }
+            }
+            while (iteration < maxRetryCount && !success);
+
+            return response;
+        }
+
+        private Dictionary<string, string> ConvertResponseToXML(string httpResponse) {
+            //Create the XmlDocument.
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(httpResponse);
+
+            XmlNodeList entryNode = doc.GetElementsByTagName("entry");
+
+            Dictionary<string, string> packageInfo = new Dictionary<string, string>();
+            for (int i = 0; i < entryNode.Count; i++)
+            {
+                XmlNode node = entryNode[i];
+                string packageName = "";
+                string packageVersion = "";
+                string published = "";
+                string[] owners = new string[] {};
+                var entryChildNodes = node.ChildNodes;
+                foreach (XmlElement childNode in entryChildNodes)
+                {
+                    var entryKey = childNode.LocalName;
+                    if (entryKey.Equals("properties"))
+                    {
+                        var propertyChildNodes = childNode.ChildNodes;
+                        foreach (XmlElement propertyChild in propertyChildNodes)
+                        {
+                            var propertyKey = propertyChild.LocalName;
+                            var propertyValue = propertyChild.InnerText;
+                            if (propertyKey.Equals("NormalizedVersion"))
+                            {
+                                packageVersion = propertyValue;
+                            }
+                            else if (propertyKey.Equals("Id"))
+                            {
+                                packageName = propertyValue;
+                            }
+                            else if (propertyKey.Equals("Owners"))
+                            {
+                                owners = propertyValue.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                            }
+                            else if (propertyKey.Equals("Published"))
+                            {
+                                published = propertyValue;
+                            }
+                        }
+
+                        packageInfo.Add("Name",packageName);
+                        packageInfo.Add("Version",packageVersion);
+                        Console.WriteLine("published: " + published);
+                        break; // don't care about rest of the childNode's keys
+                    }
+                }
+            }
+
+            return packageInfo;
         }
 
         #endregion
