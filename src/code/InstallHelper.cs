@@ -1160,6 +1160,7 @@ namespace Microsoft.PowerShell.PSResourceGet.Cmdlets
                         { "isModule", isModule },
                         { "isScript", isScript },
                         { "psResourceInfoPkg", pkgToInstall },
+                        { "externalModuleDependencies", externalModuleDependencies},
                         { "tempDirNameVersionPath", tempDirNameVersion },
                         { "pkgVersion", pkgVersion },
                         { "scriptPath", scriptPath  },
